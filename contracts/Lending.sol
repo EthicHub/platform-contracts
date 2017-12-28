@@ -1,33 +1,33 @@
 pragma solidity ^0.4.18;
 
-import "./SafeMath.sol";
-import "./Pausable.sol";
+import "./math/SafeMath.sol";
+import "./lifecycle/Pausable.sol";
+import "./ownership/Ownable.sol";
 
 
-contract Lending is Pausable {
+contract Lending is Ownable, Pausable {
     using SafeMath for uint256;
     uint256 public minContribAmount = 0.1 ether;                          // 0.01 ether
-    enum LendingState {Contributing, ContributionSuccessful, ContributionFailed, ContributionReturned}
+    enum LendingState {AcceptingContributions, AwaitingReturn, ProjectNotFunded, ContributionReturned}
 
     mapping(address => Investor) public investors;
     uint256 public fundingStartTime;                                     // Start time of contribution period in UNIX time
     uint256 public fundingEndTime;                                       // End time of contribution period in UNIX time
     uint256 public totalContributed;
     bool public capReached;
-    bool public returnsEnabled;
-    LendingState public state;
+    LendingState public state; 
+    address[] public investorsKeys;
 
     uint256 public lendingInterestRatePercentage;
     uint256 public totalLendingAmount;
     uint256 public lendingDays;
-    uint256 public initialEthPerPesoRate;
-    uint256 public totalLendingPesoAmount;
+    uint256 public initialEthPerFiatRate;
+    uint256 public totalLendingFiatAmount;
     address public borrower;
     uint256 public borrowerReturnDate;
-    uint256 public borrowerReturnPesoAmount;
-    uint256 public borrowerReturnEthPerPesoRate;
-    uint256 public borrowerReturnEthAmount;
-    bool public borrowReturnsEnabled;
+    uint256 public borrowerReturnFiatAmount;
+    uint256 public borrowerReturnEthPerFiatRate;
+    uint256 public borrowerReturnAmount;
 
     struct Investor {
         uint amount;
@@ -38,25 +38,28 @@ contract Lending is Pausable {
     event onCapReached(uint endTime);
     event onContribution(uint totalContributed, address indexed investor, uint amount, uint investorsCount);
     event onCompensated(address indexed contributor, uint amount);
+    event StateChange(uint state);
 
-    function Lending(uint fundingStartTime, uint fundintEndTime, address _borrower, uint _lendingInterestRatePercentage, uint _totalLendingAmount, uint25 _initialEthPerPesoRate, _lendingDays){
+    function Lending(uint _fundingStartTime, uint _fundingEndTime, address _borrower, uint _lendingInterestRatePercentage, uint _totalLendingAmount, uint256 _initialEthPerFiatRate, uint256 _lendingDays) public {
         fundingStartTime = _fundingStartTime;
         fundingEndTime = _fundingEndTime;
         borrower = _borrower;
-        /115
+        // 115
         lendingInterestRatePercentage = _lendingInterestRatePercentage;
         totalLendingAmount = _totalLendingAmount;
-        initialEthPerPesoRate = _initialEthPerPesoRate;
-        totalLendingPesoAmount = totalLendingAmount.mul(initialEthPerPesoRate);
+        initialEthPerFiatRate = _initialEthPerFiatRate;
+        totalLendingFiatAmount = totalLendingAmount.mul(initialEthPerFiatRate);
         //90 days for version 0.1
         lendingDays = _lendingDays;
-        state = LendingState.Contributing;
-    }
-    function() payable stopInEmergency {
-        contributeWithAddress(msg.sender);
+        state = LendingState.AcceptingContributions;
+        StateChange(uint(state));
     }
 
-    function isContribPeriodRunning() constant returns(bool){
+    function() public payable whenNotPaused {
+        contributeWithAddress(msg.sender);
+    }
+    
+    function isContribPeriodRunning() public constant returns(bool){
         return fundingStartTime <= now && fundingEndTime > now && !capReached;
     }
 
@@ -65,10 +68,7 @@ contract Lending is Pausable {
     //  If cap is reached, end time should be modified
     //  Funds should be transferred into multisig wallet
     // @param contributor Address 
-    function contributeWithAddress(address contributor)
-        payable
-        stopInEmergency
-    {
+    function contributeWithAddress(address contributor) public payable whenNotPaused {
         require(msg.value >= minContribAmount);
         require(isContribPeriodRunning());
 
@@ -86,8 +86,8 @@ contract Lending is Pausable {
             oldTotalContributed < totalLendingAmount)
         {
             capReached = true;
-            endTime = now;
-            onCapReached(endTime);
+            fundingEndTime = now;
+            onCapReached(fundingEndTime);
 
             // Everything above hard cap will be sent back to contributor
             excessContribValue = newTotalContributed.sub(totalLendingAmount);
@@ -108,46 +108,49 @@ contract Lending is Pausable {
         onContribution(newTotalContributed, contributor, contribValue, investorsKeys.length);
     }
 
-    function finishContributionPeriod() onlyOwner {
+    function finishContributionPeriod() external onlyOwner {
         if (totalContributed < totalLendingAmount){
-            require(now > endTime);
-            returnsEnabled = true;
-            state = LendingState.ContributionFailed;
+            require(now > fundingEndTime);
+            state = LendingState.ProjectNotFunded;
+            StateChange(uint(state));
         }
         else{
-            lendingSuccessful = true;
             borrower.transfer(totalContributed);
-            state = LendingState.ContributionSuccessful;
-            borrowerReturnPesoAmount = totalLendingPesoAmount.mul(lendingInterestRatePercentage).div(100);
+            state = LendingState.AwaitingReturn;
+            StateChange(uint(state));
+            borrowerReturnFiatAmount = totalLendingFiatAmount.mul(lendingInterestRatePercentage).div(100);
         }
     }
 
-    function reclaimContribution(address beneficiary) {
-        require(returnsEnabled);
+    function reclaimContribution(address beneficiary) external {
+        require(state == LendingState.ProjectNotFunded);
         uint contribution = investors[beneficiary].amount;
         require(contribution > 0);
         beneficiary.transfer(contribution);
     }
 
-    function establishBorrowerReturnEthPerPesoRate(rate) onlyOwner{
-        borrowerReturnEthPerPesoRate = rate;
-        borrowerReturnEthAmount = borrowerReturnPesoAmount.div(borrowerReturnEthPerPesoRate);
+    function establishBorrowerReturnEthPerFiatRate(uint256 _borrowerReturnEthPerFiatRate) external onlyOwner{
+        require(state == LendingState.AwaitingReturn);
+        borrowerReturnEthPerFiatRate = _borrowerReturnEthPerFiatRate;
+        borrowerReturnAmount = borrowerReturnFiatAmount.div(borrowerReturnEthPerFiatRate);
     }
     
-    function returnBorroweedEth() payable {
-        require(msg.sender.value == borrowerReturnEthAmount);
+    function returnBorroweedEth() payable external {
+        require(state == LendingState.AwaitingReturn);
+        require(borrowerReturnEthPerFiatRate > 0);
+        require(msg.value == borrowerReturnAmount);
         state = LendingState.ContributionReturned;
-        borrowReturnsEnabled = true;
+        StateChange(uint(state));
     } 
 
-    function reclaimContributionWithInterest(address beneficiary){
-        require(borrowReturnsEnabled);
+    function reclaimContributionWithInterest(address beneficiary) external{
+        require(state == LendingState.ContributionReturned);
         uint contribution = investors[beneficiary].amount.mul(lendingInterestRatePercentage).div(100);
         require(contribution > 0);
         beneficiary.transfer(contribution);
     }
 
-    function selfkill() onlyOwner {
+    function selfKill() external onlyOwner {
         selfdestruct(owner);
     }
 }
