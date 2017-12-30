@@ -145,7 +145,7 @@ contract Lending is Ownable, Pausable {
 
     function reclaimContributionWithInterest(address beneficiary) external{
         require(state == LendingState.ContributionReturned);
-        uint contribution = investors[beneficiary].amount.mul(lendingInterestRatePercentage).div(100);
+        uint contribution = investors[beneficiary].amount.mul(initialEthPerFiatRate).mul(lendingInterestRatePercentage).div(borrowerReturnEthPerFiatRate).div(100);
         require(contribution > 0);
         beneficiary.transfer(contribution);
     }
