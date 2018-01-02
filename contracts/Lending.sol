@@ -94,6 +94,7 @@ contract Lending is Ownable, Pausable {
             contribValue = contribValue.sub(excessContribValue);
 
             totalContributed = totalLendingAmount;
+            finishContributionPeriod();
         }
 
         if (investors[contributor].amount == 0) {
@@ -108,7 +109,11 @@ contract Lending is Ownable, Pausable {
         onContribution(newTotalContributed, contributor, contribValue, investorsKeys.length);
     }
 
-    function finishContributionPeriod() external onlyOwner {
+    function enableReturnContribution() external onlyOwner {
+        finishContributionPeriod();
+    }
+
+    function finishContributionPeriod() internal {
         if (totalContributed < totalLendingAmount){
             require(now > fundingEndTime);
             state = LendingState.ProjectNotFunded;

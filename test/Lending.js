@@ -73,7 +73,7 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
             var balance = await web3.eth.getBalance(this.lending.address);
             balance.toNumber().should.be.equal(ether(1).toNumber());
             await increaseTimeTo(this.fundingEndTime  + duration.days(1))
-            await this.lending.finishContributionPeriod({from: owner})
+            await this.lending.enableReturnContribution({from: owner})
             var state = await this.lending.state();
             // project not funded
             state.toNumber().should.be.equal(2)
@@ -90,16 +90,13 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
 
         it('cap reached', async function () {
             await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+            var borrowerBalance = await web3.eth.getBalance(borrower);
             await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.fulfilled;
             await this.lending.sendTransaction({value:ether(1), from: investor2}).should.be.fulfilled;
-            await this.lending.sendTransaction({value:ether(1), from: investor3}).should.be.fulfilled;
-
-            await increaseTimeTo(this.fundingEndTime  + duration.days(1))
             var balance = await web3.eth.getBalance(this.lending.address);
-            balance.toNumber().should.be.equal(ether(3).toNumber());
-        
-            var borrowerBalance = await web3.eth.getBalance(borrower);
-            await this.lending.finishContributionPeriod({from: owner}).should.be.fulfilled;
+            balance.toNumber().should.be.equal(ether(2).toNumber());
+            await this.lending.sendTransaction({value:ether(1), from: investor3}).should.be.fulfilled;
+            await increaseTimeTo(this.fundingEndTime  + duration.days(1))
             new BigNumber(await web3.eth.getBalance(borrower)).should.be.bignumber.above(new BigNumber(borrowerBalance).add(ether(2.9).toNumber()));
             var balance = await web3.eth.getBalance(this.lending.address);
             balance.toNumber().should.be.equal(ether(0).toNumber());
@@ -142,12 +139,11 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
             await increaseTimeTo(this.fundingStartTime  + duration.days(1))
             await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.fulfilled;
             await this.lending.sendTransaction({value:ether(1), from: investor2}).should.be.fulfilled;
-            await this.lending.sendTransaction({value:ether(1), from: investor3}).should.be.fulfilled;
             var balance = web3.eth.getBalance(owner);
             await this.lending.selfKill({from:investor}).should.be.rejectedWith(EVMRevert);
             await this.lending.selfKill({from:owner}).should.be.fulfilled;
             // 0.1 eth less due to used gas
-            new BigNumber(web3.eth.getBalance(owner)).should.be.bignumber.above(new BigNumber(balance).add(ether(2.9)));
+            new BigNumber(web3.eth.getBalance(owner)).should.be.bignumber.above(new BigNumber(balance).add(ether(1.9)));
         });
     });
 
