@@ -58,3 +58,6 @@ typings/
 .env
 
 *.swp
+
+package-lock.json
+build/
