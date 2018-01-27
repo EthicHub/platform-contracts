@@ -39,5 +39,9 @@
     "url": "https://github.com/EthicHub/presale/issues"
   },
   "homepage": "https://github.com/EthicHub/presale#readme",
-  "dependencies": {}
+  "dependencies": {
+    "temp": "^0.8.3",
+    "truffle-artifactor": "^3.0.2",
+    "web3": "^1.0.0-beta.27"
+  }
 }
