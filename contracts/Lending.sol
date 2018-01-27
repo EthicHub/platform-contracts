@@ -56,7 +56,11 @@ contract Lending is Ownable, Pausable {
     }
 
     function() public payable whenNotPaused {
-        contributeWithAddress(msg.sender);
+        if(state == LendingState.AwaitingReturn){
+            returnBorroweedEth(); 
+        } else{
+            contributeWithAddress(msg.sender);
+        }
     }
     
     function isContribPeriodRunning() public constant returns(bool){
@@ -140,7 +144,7 @@ contract Lending is Ownable, Pausable {
         borrowerReturnAmount = borrowerReturnFiatAmount.div(borrowerReturnEthPerFiatRate);
     }
     
-    function returnBorroweedEth() payable external {
+    function returnBorroweedEth() payable public {
         require(state == LendingState.AwaitingReturn);
         require(borrowerReturnEthPerFiatRate > 0);
         require(msg.value == borrowerReturnAmount);

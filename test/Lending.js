@@ -1,5 +1,5 @@
 'use strict';
-import ether from './helpers/ether'
+import ether from './helpers/ether' 
 import {advanceBlock} from './helpers/advanceToBlock'
 import {increaseTimeTo, duration} from './helpers/increaseTime'
 import latestTime from './helpers/latestTime'
@@ -120,6 +120,7 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
 
             var balance = await web3.eth.getBalance(this.lending.address);
             balance.toNumber().should.be.equal(ether(0).toNumber());
+            await this.lending.sendTransaction({value: borrowerReturnAmount + 1}).should.be.rejectedWith(EVMRevert);
             await this.lending.returnBorroweedEth({value: borrowerReturnAmount}).should.be.fulfilled;
             var state = await this.lending.state();
             state.toNumber().should.be.equal(3);
@@ -132,6 +133,55 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
             balance.toNumber().should.be.equal(0);
 
         });
+
+
+        it('can return with sendTransaction', async function () {
+            await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+            var borrowerBalance = await web3.eth.getBalance(borrower);
+            await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.fulfilled;
+            await this.lending.sendTransaction({value:ether(1), from: investor2}).should.be.fulfilled;
+            var balance = await web3.eth.getBalance(this.lending.address);
+            balance.toNumber().should.be.equal(ether(2).toNumber());
+            await this.lending.sendTransaction({value:ether(1), from: investor3}).should.be.fulfilled;
+            await increaseTimeTo(this.fundingEndTime  + duration.days(1))
+            new BigNumber(await web3.eth.getBalance(borrower)).should.be.bignumber.above(new BigNumber(borrowerBalance).add(ether(2.9).toNumber()));
+            var balance = await web3.eth.getBalance(this.lending.address);
+            balance.toNumber().should.be.equal(ether(0).toNumber());
+
+            // project funded
+            var state = await this.lending.state();
+            state.toNumber().should.be.equal(1)
+
+            // can reclaim contribution from everyone
+            await this.lending.reclaimContribution(investor).should.be.rejectedWith(EVMRevert);
+
+            var fiatAmount = await this.lending.borrowerReturnFiatAmount();
+            new BigNumber(fiatAmount).should.be.bignumber.equal(new BigNumber(ether(3)).mul(this.lendingInterestRatePercentage).div(100).mul(400));
+
+            // should set rate before
+            await this.lending.returnBorroweedEth({value: ether(3)}).should.be.rejectedWith(EVMRevert);
+            await this.lending.establishBorrowerReturnEthPerFiatRate(500, {from: owner}).should.be.fulfilled;
+
+            var borrowerReturnAmount = await this.lending.borrowerReturnAmount();
+            new BigNumber(borrowerReturnAmount).should.be.bignumber.equal(new BigNumber(fiatAmount).div(500));
+
+            var balance = await web3.eth.getBalance(this.lending.address);
+            balance.toNumber().should.be.equal(ether(0).toNumber());
+            var state = await this.lending.state();
+            await this.lending.sendTransaction({value: borrowerReturnAmount+1}).should.be.rejectedWith(EVMRevert);
+            await this.lending.sendTransaction({value: borrowerReturnAmount}).should.be.fulfilled;
+            var state = await this.lending.state();
+            state.toNumber().should.be.equal(3);
+            var balance = await web3.eth.getBalance(this.lending.address);
+            balance.toNumber().should.be.equal(borrowerReturnAmount.toNumber());
+            await this.lending.reclaimContributionWithInterest(investor)
+            await this.lending.reclaimContributionWithInterest(investor2)
+            await this.lending.reclaimContributionWithInterest(investor3)
+            var balance = await web3.eth.getBalance(this.lending.address);
+            balance.toNumber().should.be.equal(0);
+
+        });
+
     });
 
     describe('selfKill', function() {
