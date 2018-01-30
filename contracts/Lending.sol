@@ -40,15 +40,13 @@ contract Lending is Ownable, Pausable {
     event onCompensated(address indexed contributor, uint amount);
     event StateChange(uint state);
 
-    function Lending(uint _fundingStartTime, uint _fundingEndTime, address _borrower, uint _lendingInterestRatePercentage, uint _totalLendingAmount, uint256 _initialEthPerFiatRate, uint256 _lendingDays) public {
+    function Lending(uint _fundingStartTime, uint _fundingEndTime, address _borrower, uint _lendingInterestRatePercentage, uint _totalLendingAmount, uint256 _lendingDays) public {
         fundingStartTime = _fundingStartTime;
         fundingEndTime = _fundingEndTime;
         borrower = _borrower;
         // 115
         lendingInterestRatePercentage = _lendingInterestRatePercentage;
         totalLendingAmount = _totalLendingAmount;
-        initialEthPerFiatRate = _initialEthPerFiatRate;
-        totalLendingFiatAmount = totalLendingAmount.mul(initialEthPerFiatRate);
         //90 days for version 0.1
         lendingDays = _lendingDays;
         state = LendingState.AcceptingContributions;
@@ -98,7 +96,6 @@ contract Lending is Ownable, Pausable {
             contribValue = contribValue.sub(excessContribValue);
 
             totalContributed = totalLendingAmount;
-            finishContributionPeriod();
         }
 
         if (investors[contributor].amount == 0) {
@@ -114,21 +111,20 @@ contract Lending is Ownable, Pausable {
     }
 
     function enableReturnContribution() external onlyOwner {
-        finishContributionPeriod();
+        require(totalContributed < totalLendingAmount);
+        require(now > fundingEndTime);
+        state = LendingState.ProjectNotFunded;
+        StateChange(uint(state));
     }
 
-    function finishContributionPeriod() internal {
-        if (totalContributed < totalLendingAmount){
-            require(now > fundingEndTime);
-            state = LendingState.ProjectNotFunded;
-            StateChange(uint(state));
-        }
-        else{
-            borrower.transfer(totalContributed);
-            state = LendingState.AwaitingReturn;
-            StateChange(uint(state));
-            borrowerReturnFiatAmount = totalLendingFiatAmount.mul(lendingInterestRatePercentage).div(100);
-        }
+    function finishContributionPeriod(uint256 _initialEthPerFiatRate) onlyOwner {
+        require(capReached == true);
+        initialEthPerFiatRate = _initialEthPerFiatRate;
+        borrower.transfer(totalContributed);
+        state = LendingState.AwaitingReturn;
+        StateChange(uint(state));
+        totalLendingFiatAmount = totalLendingAmount.mul(initialEthPerFiatRate);
+        borrowerReturnFiatAmount = totalLendingFiatAmount.mul(lendingInterestRatePercentage).div(100);
     }
 
     function reclaimContribution(address beneficiary) external {

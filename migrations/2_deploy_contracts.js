@@ -23,7 +23,7 @@ function now() {
 
 module.exports = function(deployer) {
     //01/10/2018
-    fundingStartTime = now() + duration.minutes(15);
+    fundingStartTime = now() + duration.minutes(1);
     //01/20/2018
     fundingEndTime = fundingStartTime + duration.days(1);
     lendingInterestRatePercentage = 115;
@@ -33,5 +33,5 @@ module.exports = function(deployer) {
     initialEthPerFiatRate = 400;
     lendingDays = 90;
 
-    deployer.deploy(Lending, fundingStartTime, fundingEndTime, '0x4a42CEAad068a8C926E19231d149ed3c1238E51F', lendingInterestRatePercentage, totalLendingAmount, initialEthPerFiatRate, lendingDays)
+    deployer.deploy(Lending, fundingStartTime, fundingEndTime, web3.eth.accounts[1], lendingInterestRatePercentage, totalLendingAmount, lendingDays)
 };

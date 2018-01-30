@@ -26,7 +26,7 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
         //400 pesos per eth
         this.initialEthPerFiatRate = 400;
         this.lendingDays = 90;
-        this.lending = await Lending.new(this.fundingStartTime, this.fundingEndTime, borrower, this.lendingInterestRatePercentage, this.totalLendingAmount, this.initialEthPerFiatRate, this.lendingDays);
+        this.lending = await Lending.new(this.fundingStartTime, this.fundingEndTime, borrower, this.lendingInterestRatePercentage, this.totalLendingAmount,  this.lendingDays);
     });
 
     describe('contributing', function() {
@@ -96,6 +96,7 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
             var balance = await web3.eth.getBalance(this.lending.address);
             balance.toNumber().should.be.equal(ether(2).toNumber());
             await this.lending.sendTransaction({value:ether(1), from: investor3}).should.be.fulfilled;
+            await this.lending.finishContributionPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
             await increaseTimeTo(this.fundingEndTime  + duration.days(1))
             new BigNumber(await web3.eth.getBalance(borrower)).should.be.bignumber.above(new BigNumber(borrowerBalance).add(ether(2.9).toNumber()));
             var balance = await web3.eth.getBalance(this.lending.address);
@@ -143,6 +144,9 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
             var balance = await web3.eth.getBalance(this.lending.address);
             balance.toNumber().should.be.equal(ether(2).toNumber());
             await this.lending.sendTransaction({value:ether(1), from: investor3}).should.be.fulfilled;
+
+            await this.lending.finishContributionPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+
             await increaseTimeTo(this.fundingEndTime  + duration.days(1))
             new BigNumber(await web3.eth.getBalance(borrower)).should.be.bignumber.above(new BigNumber(borrowerBalance).add(ether(2.9).toNumber()));
             var balance = await web3.eth.getBalance(this.lending.address);
@@ -152,7 +156,6 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
             var state = await this.lending.state();
             state.toNumber().should.be.equal(1)
 
-            // can reclaim contribution from everyone
             await this.lending.reclaimContribution(investor).should.be.rejectedWith(EVMRevert);
 
             var fiatAmount = await this.lending.borrowerReturnFiatAmount();
