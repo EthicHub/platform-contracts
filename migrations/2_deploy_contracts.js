@@ -21,17 +21,34 @@ function now() {
 }
 
 
-module.exports = function(deployer) {
-    //01/10/2018
-    fundingStartTime = now() + duration.minutes(1);
-    //01/20/2018
-    fundingEndTime = fundingStartTime + duration.days(1);
-    lendingInterestRatePercentage = 115;
-    // 3 eths
-    totalLendingAmount = 3000000000000000000;
-    //400 pesos per eth
-    initialEthPerFiatRate = 400;
-    lendingDays = 90;
+const config = {
+  rinkeby: {
+    fundingStartTime: now() + duration.minutes(1),
+    fundingEndTime: now() + duration.minutes(10),
+    lendingInterestRatePercentage: 115,
+    totalLendingAmount:1000000000000000000,
+    lendingDays: 10,
+    borrowerAddress: "0x08B909c5c1Fc6bCc4e69BA865b3c38b6365bD894",
+  },
+  mainnet: {
+    fundingStartTime: 1522526400,
+    fundingEndTime: now() + duration.minutes(10),
+    lendingInterestRatePercentage: 115,
+    totalLendingAmount:2000000000000000000,
+    lendingDays: 60,
+    borrowerAddress: "0x0623b4224763777bed743403c25e37630cefa34a"
+  }
+};
 
-    deployer.deploy(Lending, fundingStartTime, fundingEndTime, web3.eth.accounts[1], lendingInterestRatePercentage, totalLendingAmount, lendingDays)
+module.exports = function(deployer) {
+    const parameters = config.rinkeby;
+
+    deployer.deploy(
+      Lending,
+      parameters.fundingStartTime,
+      parameters.fundingEndTime,
+      parameters.borrowerAddress,
+      parameters.lendingInterestRatePercentage,
+      parameters.totalLendingAmount,
+      parameters.lendingDays);
 };

@@ -24,7 +24,7 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
         this.lendingInterestRatePercentage = 115;
         this.totalLendingAmount = ether(3);
         //400 pesos per eth
-        this.initialEthPerFiatRate = 400;
+        this.initialFiatPerEthRate = 400;
         this.lendingDays = 90;
         this.lending = await Lending.new(this.fundingStartTime, this.fundingEndTime, borrower, this.lendingInterestRatePercentage, this.totalLendingAmount,  this.lendingDays);
     });
@@ -96,7 +96,7 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
             var balance = await web3.eth.getBalance(this.lending.address);
             balance.toNumber().should.be.equal(ether(2).toNumber());
             await this.lending.sendTransaction({value:ether(1), from: investor3}).should.be.fulfilled;
-            await this.lending.finishContributionPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            await this.lending.finishContributionPeriod(this.initialFiatPerEthRate, {from: owner}).should.be.fulfilled;
             await increaseTimeTo(this.fundingEndTime  + duration.days(1))
             new BigNumber(await web3.eth.getBalance(borrower)).should.be.bignumber.above(new BigNumber(borrowerBalance).add(ether(2.9).toNumber()));
             var balance = await web3.eth.getBalance(this.lending.address);
@@ -114,7 +114,7 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
 
             // should set rate before
             await this.lending.returnBorroweedEth({value: ether(3)}).should.be.rejectedWith(EVMRevert);
-            await this.lending.establishBorrowerReturnEthPerFiatRate(500, {from: owner}).should.be.fulfilled;
+            await this.lending.establishBorrowerReturnFiatPerEthRate(500, {from: owner}).should.be.fulfilled;
 
             var borrowerReturnAmount = await this.lending.borrowerReturnAmount();
             new BigNumber(borrowerReturnAmount).should.be.bignumber.equal(new BigNumber(fiatAmount).div(500));
@@ -145,7 +145,7 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
             balance.toNumber().should.be.equal(ether(2).toNumber());
             await this.lending.sendTransaction({value:ether(1), from: investor3}).should.be.fulfilled;
 
-            await this.lending.finishContributionPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            await this.lending.finishContributionPeriod(this.initialFiatPerEthRate, {from: owner}).should.be.fulfilled;
 
             await increaseTimeTo(this.fundingEndTime  + duration.days(1))
             new BigNumber(await web3.eth.getBalance(borrower)).should.be.bignumber.above(new BigNumber(borrowerBalance).add(ether(2.9).toNumber()));
@@ -163,7 +163,7 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
 
             // should set rate before
             await this.lending.returnBorroweedEth({value: ether(3)}).should.be.rejectedWith(EVMRevert);
-            await this.lending.establishBorrowerReturnEthPerFiatRate(500, {from: owner}).should.be.fulfilled;
+            await this.lending.establishBorrowerReturnFiatPerEthRate(500, {from: owner}).should.be.fulfilled;
 
             var borrowerReturnAmount = await this.lending.borrowerReturnAmount();
             new BigNumber(borrowerReturnAmount).should.be.bignumber.equal(new BigNumber(fiatAmount).div(500));
