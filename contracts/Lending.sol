@@ -3,9 +3,10 @@ pragma solidity ^0.4.18;
 import "./math/SafeMath.sol";
 import "./lifecycle/Pausable.sol";
 import "./ownership/Ownable.sol";
+import "./oraclize/oraclizeAPI.sol";
 
 
-contract Lending is Ownable, Pausable {
+contract Lending is Ownable, Pausable, usingOraclize {
     using SafeMath for uint256;
     uint256 public minContribAmount = 0.1 ether;                          // 0.01 ether
     enum LendingState {AcceptingContributions, AwaitingReturn, ProjectNotFunded, ContributionReturned}
@@ -39,8 +40,11 @@ contract Lending is Ownable, Pausable {
     event onContribution(uint totalContributed, address indexed investor, uint amount, uint investorsCount);
     event onCompensated(address indexed contributor, uint amount);
     event StateChange(uint state);
+    event newOraclizeQuery(string description);
 
     function Lending(uint _fundingStartTime, uint _fundingEndTime, address _borrower, uint _lendingInterestRatePercentage, uint _totalLendingAmount, uint256 _lendingDays) public {
+        OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
+        oraclize_setProof(proofType_TLSNotary | proofStorage_IPFS);
         fundingStartTime = _fundingStartTime;
         fundingEndTime = _fundingEndTime;
         borrower = _borrower;
@@ -115,6 +119,16 @@ contract Lending is Ownable, Pausable {
         require(now > fundingEndTime);
         state = LendingState.ProjectNotFunded;
         StateChange(uint(state));
+    }
+
+    function updateInitialEthPerFiatRate() payable {
+        newOraclizeQuery("Oraclize query was sent, standing by for the answer..");
+        oraclize_query("URL", "json(https://api.bitso.com/v3/ticker/?book=eth_mxn).payload.last");
+    }
+
+    function __callback(bytes32 myid, string result, bytes proof) {
+        if (msg.sender != oraclize_cbAddress()) throw;
+        initialEthPerFiatRate = parseInt(result, 2);
     }
 
     function finishContributionPeriod(uint256 _initialEthPerFiatRate) onlyOwner {
