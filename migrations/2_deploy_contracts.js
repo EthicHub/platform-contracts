@@ -30,18 +30,18 @@ const config = {
     lendingDays: 10,
     borrowerAddress: "0x08B909c5c1Fc6bCc4e69BA865b3c38b6365bD894",
   },
-  mainnet: {
+  live: {
     fundingStartTime: 1522526400,
-    fundingEndTime: now() + duration.minutes(10),
+    fundingEndTime: 1523736000,
     lendingInterestRatePercentage: 115,
-    totalLendingAmount:2000000000000000000,
+    totalLendingAmount: 2000000000000000000, //2 eth
     lendingDays: 60,
     borrowerAddress: "0x0623b4224763777bed743403c25e37630cefa34a"
   }
 };
 
 module.exports = function(deployer) {
-    const parameters = config.rinkeby;
+    const parameters = config.live;
 
     deployer.deploy(
       Lending,
