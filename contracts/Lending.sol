@@ -3,6 +3,7 @@ pragma solidity ^0.4.18;
 import "./math/SafeMath.sol";
 import "./lifecycle/Pausable.sol";
 import "./ownership/Ownable.sol";
+import "./Reputation.sol";
 
 
 contract Lending is Ownable, Pausable {
@@ -29,6 +30,8 @@ contract Lending is Ownable, Pausable {
     uint256 public borrowerReturnEthPerFiatRate;
     uint256 public borrowerReturnAmount;
 
+    Reputation reputation;
+
     struct Investor {
         uint amount;
         bool isCompensated;
@@ -40,7 +43,7 @@ contract Lending is Ownable, Pausable {
     event onCompensated(address indexed contributor, uint amount);
     event StateChange(uint state);
 
-    function Lending(uint _fundingStartTime, uint _fundingEndTime, address _borrower, uint _lendingInterestRatePercentage, uint _totalLendingAmount, uint256 _lendingDays) public {
+    function Lending(uint _fundingStartTime, uint _fundingEndTime, address _borrower, uint _lendingInterestRatePercentage, uint _totalLendingAmount, uint256 _lendingDays, address _reputationAddress) public {
         fundingStartTime = _fundingStartTime;
         fundingEndTime = _fundingEndTime;
         borrower = _borrower;
@@ -50,7 +53,18 @@ contract Lending is Ownable, Pausable {
         //90 days for version 0.1
         lendingDays = _lendingDays;
         state = LendingState.AcceptingContributions;
+        reputation = Reputation(_reputationAddress);
         StateChange(uint(state));
+    }
+
+    function giveRep() public {
+        //type 0, borrower; test with sender address
+        reputation.giveRep(msg.sender, 0);
+    }
+
+    function burnRep() public {
+        //type 0, borrower; test with sender address
+        reputation.giveRep(msg.sender, 0);
     }
 
     function() public payable whenNotPaused {

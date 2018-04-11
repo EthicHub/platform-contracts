@@ -1,4 +1,5 @@
 const Lending = artifacts.require('Lending');
+const Reputation = artifacts.require('Reputation');
 
 function latestTime() {
   return web3.eth.getBlock(web3.eth.blockNumber).timestamp;
@@ -32,6 +33,12 @@ module.exports = function(deployer) {
     //400 pesos per eth
     initialEthPerFiatRate = 400;
     lendingDays = 90;
-
-    deployer.deploy(Lending, fundingStartTime, fundingEndTime, web3.eth.accounts[1], lendingInterestRatePercentage, totalLendingAmount, lendingDays)
+    deployer.then(function() {
+        return Reputation.new();
+    }).then(function(reputation) {
+        console.log(reputation.address)
+        console.log(reputation.address)
+        reputation.addLendingContract(fundingStartTime, fundingEndTime, web3.eth.accounts[1], lendingInterestRatePercentage, totalLendingAmount, lendingDays)
+        //return deployer.deploy(Lending, fundingStartTime, fundingEndTime, web3.eth.accounts[1], lendingInterestRatePercentage, totalLendingAmount, lendingDays, Reputation.address)
+    });
 };
