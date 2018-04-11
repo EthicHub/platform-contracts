@@ -50,4 +50,14 @@ contract Reputation is Ownable {
         }
         lendingContracts[msg.sender] = ContractStatus.FeedbackGiven;
     }
+
+    function viewRep(address target, uint _type) public view returns(uint score){
+        if (UserType(_type) == UserType.Borrower){
+            score = borrowers[target];
+        }
+        else if (UserType(_type) == UserType.LocalNode){
+            score = localNodes[target];
+        }
+    }
+
 }
