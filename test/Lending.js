@@ -1,5 +1,5 @@
 'use strict';
-import ether from './helpers/ether' 
+import ether from './helpers/ether'
 import {advanceBlock} from './helpers/advanceToBlock'
 import {increaseTimeTo, duration} from './helpers/increaseTime'
 import latestTime from './helpers/latestTime'
@@ -29,8 +29,9 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
         //400 pesos per eth
         this.initialEthPerFiatRate = 400;
         this.lendingDays = 90;
-        this.lending = await Lending.new(this.fundingStartTime, this.fundingEndTime, borrower, this.lendingInterestRatePercentage, this.totalLendingAmount,  this.lendingDays);
         this.whitelist = await Whitelist.new(whitelisted_accounts);
+
+        this.lending = await Lending.new(this.fundingStartTime, this.fundingEndTime, borrower, this.lendingInterestRatePercentage, this.totalLendingAmount,  this.lendingDays, this.whitelist);
     });
 
     describe('contributing', function() {
