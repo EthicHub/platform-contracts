@@ -31,7 +31,7 @@ contract Whitelist is Ownable {
 
     event RegistrationStatusChanged(address target, bool isRegistered);
 
-    function Whitelist(address[] _whitelisted_accounts)
+    function initWhitelist(address[] _whitelisted_accounts)
         public
         onlyOwner
     {

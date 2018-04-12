@@ -1,9 +1,29 @@
-pragma solidity ^0.4.18;
+/*
+    Smart contract of Lending.
+
+    Copyright (C) 2018 EthicHub
+
+    This file is part of platform contracts.
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+pragma solidity ^0.4.21;
 
 import "./math/SafeMath.sol";
 import "./lifecycle/Pausable.sol";
 import "./ownership/Ownable.sol";
-import "./Reputation.sol";
+import "./Whitelist.sol";
 
 
 contract Lending is Ownable, Pausable {
@@ -18,6 +38,7 @@ contract Lending is Ownable, Pausable {
     bool public capReached;
     LendingState public state;
     address[] public investorsKeys;
+    Whitelist public whitelist;
 
     uint256 public lendingInterestRatePercentage;
     uint256 public totalLendingAmount;
@@ -30,8 +51,6 @@ contract Lending is Ownable, Pausable {
     uint256 public borrowerReturnEthPerFiatRate;
     uint256 public borrowerReturnAmount;
 
-    Reputation reputation;
-
     struct Investor {
         uint amount;
         bool isCompensated;
@@ -43,31 +62,18 @@ contract Lending is Ownable, Pausable {
     event onCompensated(address indexed contributor, uint amount);
     event StateChange(uint state);
 
-    function Lending(uint _fundingStartTime, uint _fundingEndTime, address _borrower, uint _lendingInterestRatePercentage, uint _totalLendingAmount, uint256 _lendingDays, address _reputationAddress, address _whitelist) public {
+    function Lending(uint _fundingStartTime, uint _fundingEndTime, address _borrower, uint _lendingInterestRatePercentage, uint _totalLendingAmount, uint256 _lendingDays, Whitelist _whitelist) public {
         fundingStartTime = _fundingStartTime;
         fundingEndTime = _fundingEndTime;
         borrower = _borrower;
-        whitelist = Whitelist(_whitelist);
-
+        whitelist = _whitelist;
         // 115
         lendingInterestRatePercentage = _lendingInterestRatePercentage;
         totalLendingAmount = _totalLendingAmount;
-
         //90 days for version 0.1
         lendingDays = _lendingDays;
         state = LendingState.AcceptingContributions;
-        reputation = Reputation(_reputationAddress);
         emit StateChange(uint(state));
-    }
-
-    function giveRep() public {
-        //type 0, borrower; test with sender address
-        reputation.giveRep(msg.sender, 0);
-    }
-
-    function burnRep() public {
-        //type 0, borrower; test with sender address
-        reputation.giveRep(msg.sender, 0);
     }
 
     function() public payable whenNotPaused {
@@ -90,6 +96,8 @@ contract Lending is Ownable, Pausable {
     function contributeWithAddress(address contributor) public payable whenNotPaused {
         require(msg.value >= minContribAmount);
         require(isContribPeriodRunning());
+        // require contributor whitelisted
+        require(whitelist.viewRegistrationStatus(contributor));
 
         uint contribValue = msg.value;
         uint excessContribValue = 0;
@@ -106,7 +114,7 @@ contract Lending is Ownable, Pausable {
         {
             capReached = true;
             fundingEndTime = now;
-            onCapReached(fundingEndTime);
+            emit onCapReached(fundingEndTime);
 
             // Everything above hard cap will be sent back to contributor
             excessContribValue = newTotalContributed.sub(totalLendingAmount);
@@ -124,14 +132,14 @@ contract Lending is Ownable, Pausable {
         if (excessContribValue > 0) {
             msg.sender.transfer(excessContribValue);
         }
-        onContribution(newTotalContributed, contributor, contribValue, investorsKeys.length);
+        emit onContribution(newTotalContributed, contributor, contribValue, investorsKeys.length);
     }
 
     function enableReturnContribution() external onlyOwner {
         require(totalContributed < totalLendingAmount);
         require(now > fundingEndTime);
         state = LendingState.ProjectNotFunded;
-        StateChange(uint(state));
+        emit StateChange(uint(state));
     }
 
     function finishContributionPeriod(uint256 _initialEthPerFiatRate) onlyOwner {
@@ -139,7 +147,7 @@ contract Lending is Ownable, Pausable {
         initialEthPerFiatRate = _initialEthPerFiatRate;
         borrower.transfer(totalContributed);
         state = LendingState.AwaitingReturn;
-        StateChange(uint(state));
+        emit StateChange(uint(state));
         totalLendingFiatAmount = totalLendingAmount.mul(initialEthPerFiatRate);
         borrowerReturnFiatAmount = totalLendingFiatAmount.mul(lendingInterestRatePercentage).div(100);
     }
@@ -162,7 +170,7 @@ contract Lending is Ownable, Pausable {
         require(borrowerReturnEthPerFiatRate > 0);
         require(msg.value == borrowerReturnAmount);
         state = LendingState.ContributionReturned;
-        StateChange(uint(state));
+        emit StateChange(uint(state));
     }
 
     function reclaimContributionWithInterest(address beneficiary) external{
