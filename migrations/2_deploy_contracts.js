@@ -1,4 +1,5 @@
 const Lending = artifacts.require('Lending');
+const Whitelist = artifacts.require('Whitelist');
 
 function latestTime() {
   return web3.eth.getBlock(web3.eth.blockNumber).timestamp;
@@ -33,5 +34,16 @@ module.exports = function(deployer) {
     initialEthPerFiatRate = 400;
     lendingDays = 90;
 
-    deployer.deploy(Lending, fundingStartTime, fundingEndTime, web3.eth.accounts[1], lendingInterestRatePercentage, totalLendingAmount, lendingDays)
+    //deployer.deploy(Whitelist, web3.eth.accounts);
+
+    Whitelist.deployed().then((whitelist) => {
+    //deployer.deploy(Whitelist, web3.eth.accounts).then((whitelist) => {
+        console.log("--> Whitelist deployed");
+        console.log(web3.eth.accounts);
+
+        deployer.deploy(Lending,
+            fundingStartTime, fundingEndTime,
+            web3.eth.accounts[1], lendingInterestRatePercentage,
+            totalLendingAmount, lendingDays, whitelist.address)
+    });
 };
