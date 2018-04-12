@@ -36,14 +36,16 @@ module.exports = function(deployer) {
 
     //deployer.deploy(Whitelist, web3.eth.accounts);
 
-    Whitelist.deployed().then((whitelist) => {
-    //deployer.deploy(Whitelist, web3.eth.accounts).then((whitelist) => {
+    //Whitelist.deployed().then((whitelist) => {
+    deployer.deploy(Whitelist, web3.eth.accounts).then((whitelist) => {
         console.log("--> Whitelist deployed");
-        console.log(web3.eth.accounts);
+        Whitelist.deployed().then((whitelist) => {
+          console.log(whitelist);
+          deployer.deploy(Lending,
+              fundingStartTime, fundingEndTime,
+              web3.eth.accounts[1], lendingInterestRatePercentage,
+              totalLendingAmount, lendingDays, whitelist.address)
+        });
 
-        deployer.deploy(Lending,
-            fundingStartTime, fundingEndTime,
-            web3.eth.accounts[1], lendingInterestRatePercentage,
-            totalLendingAmount, lendingDays, whitelist.address)
     });
 };
