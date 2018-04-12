@@ -14,8 +14,11 @@ const should = require('chai')
 
 
 const Lending = artifacts.require('Lending');
+const Whitelist = artifacts.require('Whitelist');
 
 contract('Lending', function ([owner, borrower, investor, investor2, investor3, investor4, investor5, wallet]) {
+    const whitelisted_accounts = [investor, investor2, investor3, investor4, investor5];
+
     beforeEach(async function () {
         await advanceBlock();
 
@@ -27,6 +30,7 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
         this.initialEthPerFiatRate = 400;
         this.lendingDays = 90;
         this.lending = await Lending.new(this.fundingStartTime, this.fundingEndTime, borrower, this.lendingInterestRatePercentage, this.totalLendingAmount,  this.lendingDays);
+        this.whitelist = await Whitelist.new(whitelisted_accounts);
     });
 
     describe('contributing', function() {
@@ -48,6 +52,8 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
             await increaseTimeTo(this.fundingStartTime  + duration.days(1))
             var isRunning = await this.lending.isContribPeriodRunning();
             isRunning.should.be.equal(true);
+            var isWhitelisted = await this.whitelist.viewRegistrationStatus(investor);
+            isWhitelisted.should.be.equal(true);
             await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.fulfilled;
         });
 

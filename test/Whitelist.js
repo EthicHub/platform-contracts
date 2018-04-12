@@ -34,63 +34,60 @@ const should = require('chai')
   .should()
 
 
-const WhitelistedAccounts = artifacts.require('WhitelistedAccounts');
+const Whitelist = artifacts.require('Whitelist');
 
-contract('WhitelistedAccounts', function (whitelisted_accounts) {
+contract('Whitelist', function (whitelisted_accounts) {
+
+    const owner = whitelisted_accounts.pop();
+    const test_account = whitelisted_accounts.pop();
 
     beforeEach(async function () {
-      this.owner = whitelisted_accounts.pop()
-      this.account = whitelisted_accounts.pop()
       await advanceBlock();
       this.start = latestTime() + duration.minutes(2); // +2 minute so it starts after contract instantiation
       this.end = this.start + duration.days(40);
-      this.whitelisted_accounts = await WhitelistedAccounts.new(whitelisted_accounts, {from:this.owner});
     });
 
     describe('whitelisted accounts', function() {
       var account = 0;
       var is_registered = false;
-      it('change status of registered account', async function () {
-          account = whitelisted_accounts[0];
+
+      it('initialize whitelist accounts (true)', async function () {
+          this.whitelisted_accounts = await Whitelist.new(whitelisted_accounts, {from:owner}).should.be.fulfilled;
+      });
+
+      it('change status of registered account (true->false)', async function () {
+          var i = Math.floor(Math.random() * whitelisted_accounts.length);
+          account = whitelisted_accounts[i];
           is_registered = await this.whitelisted_accounts.viewRegistrationStatus(account);
           is_registered.should.be.equal(true);
-          await this.whitelisted_accounts.changeRegistrationStatus(account, false, {from:this.owner}).should.be.fulfilled;
+          await this.whitelisted_accounts.changeRegistrationStatus(account, false, {from:owner}).should.be.fulfilled;
           is_registered = await this.whitelisted_accounts.viewRegistrationStatus(account);
           is_registered.should.be.equal(false);
       });
 
-      it('change status for list of registered accounts', async function () {
+      it('change status for list of registered accounts (true->false)', async function () {
+          await this.whitelisted_accounts.changeRegistrationStatuses(whitelisted_accounts, false, {from:owner}).should.be.fulfilled;
           for (var i = 0; i < whitelisted_accounts.length; i++) {
-              account = whitelisted_accounts[i];
-              is_registered = await this.whitelisted_accounts.viewRegistrationStatus(account);
-              is_registered.should.be.equal(true);
-          }
-          await this.whitelisted_accounts.changeRegistrationStatuses(whitelisted_accounts, false, {from:this.owner}).should.be.fulfilled;
-          for (var i = 0; i < this.whitelisted_accounts.length; i++) {
               account = whitelisted_accounts[i];
               is_registered = await this.whitelisted_accounts.viewRegistrationStatus(account);
               is_registered.should.be.equal(false);
           }
       });
 
-      it('add registered account', async function () {
-          await this.whitelisted_accounts.changeRegistrationStatus(this.account, true, {from:this.owner}).should.be.fulfilled;
-          is_registered = await this.whitelisted_accounts.viewRegistrationStatus(this.account);
+      it('add registered test account (true)', async function () {
+          await this.whitelisted_accounts.changeRegistrationStatus(test_account, true, {from:owner}).should.be.fulfilled;
+          is_registered = await this.whitelisted_accounts.viewRegistrationStatus(test_account);
           is_registered.should.be.equal(true);
       });
 
-      //it('view registered accounts', async function () {
-      //    is_registered = await this.whitelisted_accounts.viewRegistrationStatus(this.account);
-      //    is_registered.should.be.equal(true);
-      //    is_registered = await this.whitelisted_accounts.viewRegistrationStatus(whitelisted_accounts[2]);
-      //    is_registered.should.be.equal(false);
-      //});
+      it('view two registered accounts: whitelisted all false and test true', async function () {
+          var i = Math.floor(Math.random() * whitelisted_accounts.length);
+          is_registered = await this.whitelisted_accounts.viewRegistrationStatus(whitelisted_accounts[i]);
+          is_registered.should.be.equal(false);
+          is_registered = await this.whitelisted_accounts.viewRegistrationStatus(test_account);
+          is_registered.should.be.equal(true);
+      });
 
-      //it('remove registered account', async function () {
-      //    await this.whitelisted_accounts.changeRegistrationStatus(this.account, false, {from:this.owner}).should.be.fulfilled;
-      //    var is_registered = await this.whitelisted_accounts.viewRegistrationStatus(this.account);
-      //    is_registered.should.be.equal(true);
-      //});
     });
 
 });

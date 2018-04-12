@@ -1,5 +1,5 @@
 /*
-    Smart contract of a Whitelisted Accounts.
+    Smart contract of a Whitelist.
 
     Copyright (C) 2018 EthicHub
 
@@ -22,22 +22,20 @@ pragma solidity ^0.4.21;
 
 import './ownership/Ownable.sol';
 
-/* @title WhitelistedAccounts
+/* @title Whitelist
 @dev This is an extension to add whitelist to a crowdsale
 */
-contract WhitelistedAccounts is Ownable {
+contract Whitelist is Ownable {
 
     mapping(address=>bool) public registered;
 
     event RegistrationStatusChanged(address target, bool isRegistered);
 
-    function WhitelistedAccounts(address[] _whitelisted_accounts) 
+    function Whitelist(address[] _whitelisted_accounts)
         public
         onlyOwner
     {
-        for (uint i = 0; i < _whitelisted_accounts.length; i++) {
-            registered[_whitelisted_accounts[i]] = true;
-        }
+        changeRegistrationStatuses(_whitelisted_accounts, true);
     }
 
     /**
@@ -78,5 +76,16 @@ contract WhitelistedAccounts is Ownable {
         isRegistered = registered[target];
     }
 
+    /**
+     * @dev View registration status of an address for participation.
+     * @return isRegistered boolean registration status of address.
+     */
+    function viewRegistrationStatuses(address[] targets)
+        view public
+    {
+        for (uint i = 0; i < targets.length; i++) {
+            viewRegistrationStatus(targets[i]);
+        }
+    }
 }
 
