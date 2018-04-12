@@ -34,13 +34,8 @@ module.exports = function(deployer) {
     initialEthPerFiatRate = 400;
     lendingDays = 90;
 
-    //deployer.deploy(Whitelist, web3.eth.accounts);
-
-    //Whitelist.deployed().then((whitelist) => {
     deployer.deploy(Whitelist, web3.eth.accounts).then((whitelist) => {
-        console.log("--> Whitelist deployed");
         Whitelist.deployed().then((whitelist) => {
-          console.log(whitelist);
           deployer.deploy(Lending,
               fundingStartTime, fundingEndTime,
               web3.eth.accounts[1], lendingInterestRatePercentage,
