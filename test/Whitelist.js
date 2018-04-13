@@ -33,7 +33,6 @@ const should = require('chai')
   .use(require('chai-bignumber')(BigNumber))
   .should()
 
-
 const Whitelist = artifacts.require('Whitelist');
 
 contract('Whitelist', function (whitelisted_accounts) {

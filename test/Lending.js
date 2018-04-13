@@ -12,12 +12,11 @@ const should = require('chai')
   .use(require('chai-bignumber')(BigNumber))
   .should()
 
-
-const Lending = artifacts.require('Lending');
 const Whitelist = artifacts.require('Whitelist');
+const Lending = artifacts.require('Lending');
 
 contract('Lending', function ([owner, borrower, investor, investor2, investor3, investor4, investor5, wallet]) {
-    const whitelisted_accounts = [investor, investor2, investor3, investor4, investor5];
+    const whitelisted_accounts = [investor, investor2, investor3, investor4];
 
     beforeEach(async function () {
         await advanceBlock();
@@ -30,7 +29,7 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
         //400 pesos per eth
         this.initialEthPerFiatRate = 400;
         this.lendingDays = 90;
-        this.lending = await Lending.new(this.fundingStartTime, this.fundingEndTime, borrower, this.lendingInterestRatePercentage, this.totalLendingAmount,  this.lendingDays, this.whitelist);
+        this.lending = await Lending.new(this.fundingStartTime, this.fundingEndTime, borrower, this.lendingInterestRatePercentage, this.totalLendingAmount,  this.lendingDays, this.whitelist.address);
     });
 
     describe('contributing', function() {
@@ -46,6 +45,12 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
             var isRunning = await this.lending.isContribPeriodRunning();
             isRunning.should.be.equal(false);
             await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.rejectedWith(EVMRevert);
+        });
+
+        it('should not allow to invest because is not whitelisted', async function () {
+            var isWhitelisted = await this.whitelist.viewRegistrationStatus(investor5);
+            isWhitelisted.should.be.equal(false);
+            await this.lending.sendTransaction({value:ether(1), from: investor5}).should.be.rejectedWith(EVMRevert);
         });
 
         it('should allow to invest in contribution period', async function () {

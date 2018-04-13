@@ -34,13 +34,12 @@ module.exports = function(deployer) {
     initialEthPerFiatRate = 400;
     lendingDays = 90;
 
-    deployer.deploy(Whitelist, web3.eth.accounts).then((whitelist) => {
+    deployer.deploy(Whitelist, web3.eth.accounts).then(function (){
         Whitelist.deployed().then((whitelist) => {
-          deployer.deploy(Lending,
-              fundingStartTime, fundingEndTime,
-              web3.eth.accounts[1], lendingInterestRatePercentage,
-              totalLendingAmount, lendingDays, whitelist.address)
+            deployer.deploy(Lending,
+                fundingStartTime, fundingEndTime,
+                web3.eth.accounts[1], lendingInterestRatePercentage,
+                totalLendingAmount, lendingDays, whitelist.address)
         });
-
     });
 };
