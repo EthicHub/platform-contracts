@@ -1,11 +1,17 @@
 'use strict';
-import ether from './helpers/ether' 
+import ether from './helpers/ether'
 import {advanceBlock} from './helpers/advanceToBlock'
 import {increaseTimeTo, duration} from './helpers/increaseTime'
 import latestTime from './helpers/latestTime'
 import EVMRevert from './helpers/EVMRevert'
 
 const BigNumber = web3.BigNumber
+
+const AcceptingContributions = 0;
+const ExchangingToFiat = 1;
+const AwaitingReturn = 2;
+const ProjectNotFunded = 3;
+const ContributionReturned = 4;
 
 const should = require('chai')
   .use(require('chai-as-promised'))
@@ -64,9 +70,47 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
             isRunning.should.be.equal(false);
             await this.lending.sendTransaction({value:ether(1), from: investor4}).should.be.rejectedWith(EVMRevert);
         });
+
+
     });
 
-    describe('finish contribution', function() {
+
+
+    describe('Exchange period', function() {
+      it('should go to exchange state after cap reached', async function() {
+        await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+        await this.lending.sendTransaction({value:this.totalLendingAmount, from: investor}).should.be.fulfilled;
+        var balance = await web3.eth.getBalance(this.lending.address);
+        balance.should.be.bignumber.equal(this.totalLendingAmount);
+        var capReached = await this.lending.capReached();
+        capReached.should.be.equal(true);
+    //    await this.lending.finishContributionPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+        var state = await this.lending.state();
+        state.toNumber().should.be.equal(ExchangingToFiat);
+
+      });
+
+      it('should fail to change state to AwaitingReturn before exchanged', async function() {
+        await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+        await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.fulfilled;
+        await this.lending.finishContributionPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.rejectedWith(EVMRevert);;
+      });
+    });
+
+    describe('selfKill', function() {
+        it('selfKill', async function () {
+            await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+            await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.fulfilled;
+            await this.lending.sendTransaction({value:ether(1), from: investor2}).should.be.fulfilled;
+            var balance = web3.eth.getBalance(owner);
+            await this.lending.selfKill({from:investor}).should.be.rejectedWith(EVMRevert);
+            await this.lending.selfKill({from:owner}).should.be.fulfilled;
+            // 0.1 eth less due to used gas
+            new BigNumber(web3.eth.getBalance(owner)).should.be.bignumber.above(new BigNumber(balance).add(ether(1.9)));
+        });
+    });
+/*
+    describe('Integration Tests', function() {
         it('cap not reached', async function () {
             await increaseTimeTo(this.fundingStartTime  + duration.days(1))
             await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.fulfilled;
@@ -76,7 +120,7 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
             await this.lending.enableReturnContribution({from: owner})
             var state = await this.lending.state();
             // project not funded
-            state.toNumber().should.be.equal(2)
+            state.toNumber().should.be.equal(ProjectNotFunded);
             var balance = web3.eth.getBalance(this.lending.address);
             balance.toNumber().should.be.equal(ether(1).toNumber());
             // can reclaim contribution from everyone
@@ -186,18 +230,5 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
         });
 
     });
-
-    describe('selfKill', function() {
-        it('selfKill', async function () {
-            await increaseTimeTo(this.fundingStartTime  + duration.days(1))
-            await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.fulfilled;
-            await this.lending.sendTransaction({value:ether(1), from: investor2}).should.be.fulfilled;
-            var balance = web3.eth.getBalance(owner);
-            await this.lending.selfKill({from:investor}).should.be.rejectedWith(EVMRevert);
-            await this.lending.selfKill({from:owner}).should.be.fulfilled;
-            // 0.1 eth less due to used gas
-            new BigNumber(web3.eth.getBalance(owner)).should.be.bignumber.above(new BigNumber(balance).add(ether(1.9)));
-        });
-    });
-
+*/
 })
