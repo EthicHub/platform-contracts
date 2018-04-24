@@ -74,6 +74,58 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
 
     });
 
+    describe('Retrieving contributions', function() {
+      it('should allow to retrieve contributions after declaring project not funded', async function () {
+          await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+          await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.fulfilled;
+          var balance = await web3.eth.getBalance(this.lending.address);
+          balance.toNumber().should.be.equal(ether(1).toNumber());
+          await increaseTimeTo(this.fundingEndTime  + duration.days(1))
+          await this.lending.declareProjectNotFunded({from: owner})
+          var state = await this.lending.state();
+          // project not funded
+          state.toNumber().should.be.equal(ProjectNotFunded);
+          var balance = web3.eth.getBalance(this.lending.address);
+          balance.toNumber().should.be.equal(ether(1).toNumber());
+          // can reclaim contribution from everyone
+          balance = web3.eth.getBalance(investor);
+          await this.lending.reclaimContribution(investor).should.be.fulfilled;
+          // 0.1 eth less due to used gas
+          new BigNumber(await web3.eth.getBalance(investor)).should.be.bignumber.above(new BigNumber(balance).add(ether(0.9).toNumber()));
+          // fail to reclaim from no investor
+          await this.lending.reclaimContribution(investor2).should.be.rejectedWith(EVMRevert);
+      });
+      
+      it('should not allow to retrieve contributions if not contributor paid', async function () {
+        await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+        await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.fulfilled;
+        var balance = await web3.eth.getBalance(this.lending.address);
+        balance.toNumber().should.be.equal(ether(1).toNumber());
+        await increaseTimeTo(this.fundingEndTime  + duration.days(1))
+        await this.lending.declareProjectNotFunded({from: owner})
+        var state = await this.lending.state();
+        // project not funded
+        state.toNumber().should.be.equal(ProjectNotFunded);
+        await this.lending.reclaimContribution(investor3).should.be.rejectedWith(EVMRevert);
+
+      });
+
+
+      it('should not allow to retrieve contributions before declaring project not funded', async function () {
+          await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+          await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.fulfilled;
+          var balance = await web3.eth.getBalance(this.lending.address);
+          balance.toNumber().should.be.equal(ether(1).toNumber());
+          await increaseTimeTo(this.fundingEndTime  + duration.days(1))
+          // can reclaim contribution from everyone
+          balance = web3.eth.getBalance(investor);
+          await this.lending.reclaimContribution(investor).should.be.rejectedWith(EVMRevert);
+
+      });
+
+      it('should not allow to retrieve contributions without interest after project is paid');
+
+    })
 
 
     describe('Exchange period', function() {
@@ -97,6 +149,8 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
       });
     });
 
+
+
     describe('selfKill', function() {
         it('selfKill', async function () {
             await increaseTimeTo(this.fundingStartTime  + duration.days(1))
@@ -117,7 +171,7 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
             var balance = await web3.eth.getBalance(this.lending.address);
             balance.toNumber().should.be.equal(ether(1).toNumber());
             await increaseTimeTo(this.fundingEndTime  + duration.days(1))
-            await this.lending.enableReturnContribution({from: owner})
+            await this.lending.declareProjectNotFunded({from: owner})
             var state = await this.lending.state();
             // project not funded
             state.toNumber().should.be.equal(ProjectNotFunded);

@@ -116,7 +116,11 @@ contract Lending is Ownable, Pausable {
         onContribution(newTotalContributed, contributor, contribValue, investorsKeys.length);
     }
 
-    function enableReturnContribution() external onlyOwner {
+    /**
+     * After the contribution period ends unsuccesfully, this method enables the contributor
+     *  to retrieve their contribution
+     */
+    function declareProjectNotFunded() external onlyOwner {
         require(totalContributed < totalLendingAmount);
         require(state == LendingState.AcceptingContributions);
         require(now > fundingEndTime);
@@ -135,6 +139,11 @@ contract Lending is Ownable, Pausable {
         borrowerReturnFiatAmount = totalLendingFiatAmount.mul(lendingInterestRatePercentage).div(100);
     }
 
+    /**
+     * Method to reclaim contribution after a project is declared as not funded
+     * @param  {address} beneficiary the contributor
+     *
+     */
     function reclaimContribution(address beneficiary) external {
         require(state == LendingState.ProjectNotFunded);
         uint contribution = investors[beneficiary].amount;
