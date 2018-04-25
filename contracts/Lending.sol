@@ -103,11 +103,10 @@ contract Lending is Ownable, Pausable {
         selfdestruct(owner);
     }
 
-    function finishContributionPeriod(uint256 _initialEthPerFiatRate) external onlyOwner {
+    function finishInitialExchangingPeriod(uint256 _initialEthPerFiatRate) external onlyOwner {
         require(capReached == true);
         require(state == LendingState.ExchangingToFiat);
         initialEthPerFiatRate = _initialEthPerFiatRate;
-        borrower.transfer(totalContributed);
         state = LendingState.AwaitingReturn;
         emit StateChange(uint(state));
         totalLendingFiatAmount = totalLendingAmount.mul(initialEthPerFiatRate);
@@ -127,17 +126,13 @@ contract Lending is Ownable, Pausable {
 
         uint contribValue = msg.value;
         uint excessContribValue = 0;
-
         uint oldTotalContributed = totalContributed;
-
         totalContributed = oldTotalContributed.add(contribValue);
-
         uint newTotalContributed = totalContributed;
 
         // cap was reached
         if (newTotalContributed >= totalLendingAmount &&
-            oldTotalContributed < totalLendingAmount)
-        {
+            oldTotalContributed < totalLendingAmount) {
             capReached = true;
             fundingEndTime = now;
             emit onCapReached(fundingEndTime);
@@ -148,9 +143,7 @@ contract Lending is Ownable, Pausable {
 
             totalContributed = totalLendingAmount;
 
-            //Waiting for Exchange
-            state = LendingState.ExchangingToFiat;
-            emit StateChange(uint(state));
+            sendFundsToBorrower();
         }
 
         if (investors[contributor].amount == 0) {
@@ -175,6 +168,14 @@ contract Lending is Ownable, Pausable {
 
     function isContribPeriodRunning() public constant returns(bool) {
         return fundingStartTime <= now && fundingEndTime > now && !capReached;
+    }
+
+    function sendFundsToBorrower() internal {
+      //Waiting for Exchange
+        require(capReached);
+        state = LendingState.ExchangingToFiat;
+        emit StateChange(uint(state));
+        borrower.transfer(totalContributed);
     }
 
 
