@@ -62,9 +62,58 @@ contract Lending is Ownable, Pausable {
         }
     }
 
-    function isContribPeriodRunning() public constant returns(bool) {
-        return fundingStartTime <= now && fundingEndTime > now && !capReached;
+    /**
+     * After the contribution period ends unsuccesfully, this method enables the contributor
+     *  to retrieve their contribution
+     */
+    function declareProjectNotFunded() external onlyOwner {
+        require(totalContributed < totalLendingAmount);
+        require(state == LendingState.AcceptingContributions);
+        require(now > fundingEndTime);
+        state = LendingState.ProjectNotFunded;
+        emit StateChange(uint(state));
     }
+
+    /**
+     * Method to reclaim contribution after a project is declared as not funded
+     * @param  beneficiary the contributor
+     *
+     */
+    function reclaimContribution(address beneficiary) external {
+        require(state == LendingState.ProjectNotFunded);
+        uint contribution = investors[beneficiary].amount;
+        require(contribution > 0);
+        beneficiary.transfer(contribution);
+    }
+
+    function establishBorrowerReturnEthPerFiatRate(uint256 _borrowerReturnEthPerFiatRate) external onlyOwner{
+        require(state == LendingState.AwaitingReturn);
+        borrowerReturnEthPerFiatRate = _borrowerReturnEthPerFiatRate;
+        borrowerReturnAmount = borrowerReturnFiatAmount.div(borrowerReturnEthPerFiatRate);
+    }
+
+    function reclaimContributionWithInterest(address beneficiary) external{
+        require(state == LendingState.ContributionReturned);
+        uint contribution = investors[beneficiary].amount.mul(initialEthPerFiatRate).mul(lendingInterestRatePercentage).div(borrowerReturnEthPerFiatRate).div(100);
+        require(contribution > 0);
+        beneficiary.transfer(contribution);
+    }
+
+    function selfKill() external onlyOwner {
+        selfdestruct(owner);
+    }
+
+    function finishContributionPeriod(uint256 _initialEthPerFiatRate) external onlyOwner {
+        require(capReached == true);
+        require(state == LendingState.ExchangingToFiat);
+        initialEthPerFiatRate = _initialEthPerFiatRate;
+        borrower.transfer(totalContributed);
+        state = LendingState.AwaitingReturn;
+        emit StateChange(uint(state));
+        totalLendingFiatAmount = totalLendingAmount.mul(initialEthPerFiatRate);
+        borrowerReturnFiatAmount = totalLendingFiatAmount.mul(lendingInterestRatePercentage).div(100);
+    }
+
 
     // @notice Function to participate in contribution period
     //  Amounts from the same address should be added up
@@ -113,48 +162,7 @@ contract Lending is Ownable, Pausable {
         if (excessContribValue > 0) {
             msg.sender.transfer(excessContribValue);
         }
-        onContribution(newTotalContributed, contributor, contribValue, investorsKeys.length);
-    }
-
-    /**
-     * After the contribution period ends unsuccesfully, this method enables the contributor
-     *  to retrieve their contribution
-     */
-    function declareProjectNotFunded() external onlyOwner {
-        require(totalContributed < totalLendingAmount);
-        require(state == LendingState.AcceptingContributions);
-        require(now > fundingEndTime);
-        state = LendingState.ProjectNotFunded;
-        emit StateChange(uint(state));
-    }
-
-    function finishContributionPeriod(uint256 _initialEthPerFiatRate) onlyOwner {
-        require(capReached == true);
-        require(state == LendingState.ExchangingToFiat);
-        initialEthPerFiatRate = _initialEthPerFiatRate;
-        borrower.transfer(totalContributed);
-        state = LendingState.AwaitingReturn;
-        emit StateChange(uint(state));
-        totalLendingFiatAmount = totalLendingAmount.mul(initialEthPerFiatRate);
-        borrowerReturnFiatAmount = totalLendingFiatAmount.mul(lendingInterestRatePercentage).div(100);
-    }
-
-    /**
-     * Method to reclaim contribution after a project is declared as not funded
-     * @param  {address} beneficiary the contributor
-     *
-     */
-    function reclaimContribution(address beneficiary) external {
-        require(state == LendingState.ProjectNotFunded);
-        uint contribution = investors[beneficiary].amount;
-        require(contribution > 0);
-        beneficiary.transfer(contribution);
-    }
-
-    function establishBorrowerReturnEthPerFiatRate(uint256 _borrowerReturnEthPerFiatRate) external onlyOwner{
-        require(state == LendingState.AwaitingReturn);
-        borrowerReturnEthPerFiatRate = _borrowerReturnEthPerFiatRate;
-        borrowerReturnAmount = borrowerReturnFiatAmount.div(borrowerReturnEthPerFiatRate);
+        emit onContribution(newTotalContributed, contributor, contribValue, investorsKeys.length);
     }
 
     function returnBorroweedEth() payable public {
@@ -165,14 +173,9 @@ contract Lending is Ownable, Pausable {
         emit StateChange(uint(state));
     }
 
-    function reclaimContributionWithInterest(address beneficiary) external{
-        require(state == LendingState.ContributionReturned);
-        uint contribution = investors[beneficiary].amount.mul(initialEthPerFiatRate).mul(lendingInterestRatePercentage).div(borrowerReturnEthPerFiatRate).div(100);
-        require(contribution > 0);
-        beneficiary.transfer(contribution);
+    function isContribPeriodRunning() public constant returns(bool) {
+        return fundingStartTime <= now && fundingEndTime > now && !capReached;
     }
 
-    function selfKill() external onlyOwner {
-        selfdestruct(owner);
-    }
+
 }
