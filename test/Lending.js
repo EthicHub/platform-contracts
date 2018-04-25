@@ -31,6 +31,7 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
         this.totalLendingAmount = ether(3);
         //400 pesos per eth
         this.initialEthPerFiatRate = 400;
+        this.finalEthPerFiatRate = 500;
         this.lendingDays = 90;
         this.lending = await Lending.new(this.fundingStartTime, this.fundingEndTime, borrower, this.lendingInterestRatePercentage, this.totalLendingAmount,  this.lendingDays);
     });
@@ -105,12 +106,10 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
         await this.lending.declareProjectNotFunded({from: owner})
         var state = await this.lending.state();
         // project not funded
-
         state.toNumber().should.be.equal(ProjectNotFunded);
         await this.lending.reclaimContribution(investor3).should.be.rejectedWith(EVMRevert);
 
       });
-
 
       it('should not allow to retrieve contributions before declaring project not funded', async function () {
           await increaseTimeTo(this.fundingStartTime  + duration.days(1))
@@ -130,9 +129,10 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
 
 
     describe('Exchange period', function() {
+
       it('should go to exchange state after cap reached', async function() {
-        await increaseTimeTo(this.fundingStartTime  + duration.days(1))
-        await this.lending.sendTransaction({value:this.totalLendingAmount, from: investor}).should.be.fulfilled;
+          await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+          await this.lending.sendTransaction({value:this.totalLendingAmount, from: investor}).should.be.fulfilled;
 
         var capReached = await this.lending.capReached();
         capReached.should.be.equal(true);
@@ -142,10 +142,11 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
 
       });
 
-      it('should transfer to borrower state after cap reached', async function() {
+      it('should transfer to borrower after cap reached', async function() {
         var initialBorrowerBalance = await web3.eth.getBalance(borrower);
         await increaseTimeTo(this.fundingStartTime  + duration.days(1))
         await this.lending.sendTransaction({value:this.totalLendingAmount, from: investor}).should.be.fulfilled;
+
         var balance = await web3.eth.getBalance(this.lending.address);
         balance.should.be.bignumber.equal(new BigNumber(0));
         var finalBorrowerBalance = await web3.eth.getBalance(borrower);
@@ -176,11 +177,67 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
           contractBorrowerReturnFiatAmount.should.be.bignumber.equal(borrowerReturnFiatAmount);
 
       });
+
+      it('should advance state after setting inital fiat amount', async function() {
+          await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+          await this.lending.sendTransaction({value:this.totalLendingAmount, from: investor}).should.be.fulfilled;
+          await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+          const state = await this.lending.state();
+          state.toNumber().should.be.equal(AwaitingReturn);
+
+      });
+
+      it('should not allow setting to unauthorized investors', async function() {
+          await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+          await this.lending.sendTransaction({value:this.totalLendingAmount, from: investor}).should.be.fulfilled;
+          await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: investor3}).should.be.rejectedWith(EVMRevert);
+
+
+      });
     });
 
+    describe('Borrower return', function() {
+
+        it('should set correct parameters', async function() {
+            await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+            await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
+            await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            var state = await this.lending.state();
+            state.toNumber().should.be.equal(AwaitingReturn);
+            const borrowerReturnEthPerFiatRate = await this.lending.borrowerReturnEthPerFiatRate();
+            borrowerReturnEthPerFiatRate.should.be.bignumber.equal(new BigNumber(this.finalEthPerFiatRate));
+            const lendingFiatAmount = new BigNumber(this.initialEthPerFiatRate).mul(this.totalLendingAmount);
+            const borrowerReturnFiatAmount = lendingFiatAmount.mul(this.lendingInterestRatePercentage).div(100);
+            const borrowerReturnAmount = borrowerReturnFiatAmount.div(this.finalEthPerFiatRate);
+            const contractBorrowerReturnAmount = await this.lending.borrowerReturnAmount();
+            contractBorrowerReturnAmount.should.be.bignumber.equal(borrowerReturnAmount);
+        });
+
+        it('should not allow to stablish return in other state', async function() {
+            await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+            await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
+            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.rejectedWith(EVMRevert);
+        });
+        it('should not allow to return contribution before setting exchange rate', async function() {
+            await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+            await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
+            await this.lending.returnBorrowedEth({from: owner, value: ether(2)}).should.be.rejectedWith(EVMRevert);
+        });
+        it('should allow the retun of proper amount', async function() {
+            await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+            await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
+            await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
+            await this.lending.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
+
+        });
+        it('should not allow to stablish return in other state');
+        it('should not allow to stablish return in other state');
 
 
-
+    });
 
     describe('selfKill', function() {
         it('selfKill', async function () {
@@ -242,8 +299,8 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
             new BigNumber(fiatAmount).should.be.bignumber.equal(new BigNumber(ether(3)).mul(this.lendingInterestRatePercentage).div(100).mul(400));
 
             // should set rate before
-            await this.lending.returnBorroweedEth({value: ether(3)}).should.be.rejectedWith(EVMRevert);
-            await this.lending.establishBorrowerReturnEthPerFiatRate(500, {from: owner}).should.be.fulfilled;
+            await this.lending.returnBorrowedEth({value: ether(3)}).should.be.rejectedWith(EVMRevert);
+            await this.lending.setBorrowerReturnEthPerFiatRate(500, {from: owner}).should.be.fulfilled;
 
             var borrowerReturnAmount = await this.lending.borrowerReturnAmount();
             new BigNumber(borrowerReturnAmount).should.be.bignumber.equal(new BigNumber(fiatAmount).div(500));
@@ -251,7 +308,7 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
             var balance = await web3.eth.getBalance(this.lending.address);
             balance.toNumber().should.be.equal(ether(0).toNumber());
             await this.lending.sendTransaction({value: borrowerReturnAmount + 1}).should.be.rejectedWith(EVMRevert);
-            await this.lending.returnBorroweedEth({value: borrowerReturnAmount}).should.be.fulfilled;
+            await this.lending.returnBorrowedEth({value: borrowerReturnAmount}).should.be.fulfilled;
             var state = await this.lending.state();
             state.toNumber().should.be.equal(3);
             var balance = await web3.eth.getBalance(this.lending.address);
@@ -291,8 +348,8 @@ contract('Lending', function ([owner, borrower, investor, investor2, investor3, 
             new BigNumber(fiatAmount).should.be.bignumber.equal(new BigNumber(ether(3)).mul(this.lendingInterestRatePercentage).div(100).mul(400));
 
             // should set rate before
-            await this.lending.returnBorroweedEth({value: ether(3)}).should.be.rejectedWith(EVMRevert);
-            await this.lending.establishBorrowerReturnEthPerFiatRate(500, {from: owner}).should.be.fulfilled;
+            await this.lending.returnBorrowedEth({value: ether(3)}).should.be.rejectedWith(EVMRevert);
+            await this.lending.setBorrowerReturnEthPerFiatRate(500, {from: owner}).should.be.fulfilled;
 
             var borrowerReturnAmount = await this.lending.borrowerReturnAmount();
             new BigNumber(borrowerReturnAmount).should.be.bignumber.equal(new BigNumber(fiatAmount).div(500));
