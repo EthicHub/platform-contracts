@@ -53,6 +53,8 @@ contract MockStorage is EthicHubStorageInterface {
         return intStorage[_key];
     }
 
+
+
     /**** Set Methods ***********/
 
     /// @param _key The key for the record
@@ -116,4 +118,7 @@ contract MockStorage is EthicHubStorageInterface {
     function deleteInt(bytes32 _key) external {
         delete intStorage[_key];
     }
+
+
+
 }

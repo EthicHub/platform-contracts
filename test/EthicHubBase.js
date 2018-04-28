@@ -30,7 +30,7 @@ contract('EthicHubBase', function (accounts) {
             storageAddress.should.be.equal(this.mockStorage.address);
         });
 
-        it.only('should set correct version', async function() {
+        it('should set correct version', async function() {
             const ethicHubContract = await MockEthicHubContract.new(this.mockStorage.address,3);
             const version = await ethicHubContract.version();
             version.should.be.bignumber.equal(3);
