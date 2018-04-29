@@ -3,11 +3,11 @@ pragma solidity ^0.4.23;
 //import "../ownership/Ownable.sol";
 
 /**
- * @title EternalStorage
+ * @title EthicHubStorage
  * @dev This contract holds all the necessary state variables to carry out the storage of any contract.
  */
-//contract EternalStorage is Ownable {
-contract EternalStorage {
+//contract EthicHubStorage is Ownable {
+contract EthicHubStorage {
 
 	mapping(bytes32 => uint256) internal uintStorage;
 	mapping(bytes32 => string) internal stringStorage;
@@ -22,7 +22,7 @@ contract EternalStorage {
 
     /// @dev Only allow access from the latest version of a contract in the Rocket Pool network after deployment
     modifier onlyEthicHubContracts() {
-        // Make sure the access is permitted to only contracts in our Dapp
+        // Maje sure the access is permitted to only contracts in our Dapp
         require(addressStorage[keccak256("contract.address", msg.sender)] != 0x0);
         _;
     }
