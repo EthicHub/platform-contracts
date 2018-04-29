@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.23;
 
 import "./storage/EthicHubStorageInterface.sol";
 
@@ -9,7 +9,7 @@ contract EthicHubBase {
 
     EthicHubStorageInterface ethicHubStorage = EthicHubStorageInterface(0);
 
-    function EthicHubBase(address _storageAddress) public {
+    constructor(address _storageAddress) public {
         // Update the contract address
         ethicHubStorage = EthicHubStorageInterface(_storageAddress);
     }

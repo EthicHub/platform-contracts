@@ -1,4 +1,4 @@
-pragma solidity ^0.4.20;
+pragma solidity ^0.4.23;
 
 import '../EthicHubBase.sol';
 import '../math/SafeMath.sol';
@@ -10,7 +10,7 @@ contract EthicHubReputation is EthicHubBase {
     event ReputationUpdated(address indexed affected, uint newValue);
 
     /// @dev constructor
-    function EthicHubReputation(address _storageAddress) EthicHubBase(_storageAddress) public {
+    constructor(address _storageAddress) EthicHubBase(_storageAddress) public {
       // Version
       version = 1;
     }
