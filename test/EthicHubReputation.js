@@ -25,12 +25,15 @@ contract('EthicHubReputation', function ([owner, community, localNode]) {
         this.lendingMock = await EthicHubBase.new(this.mockStorage.address);
         this.lendingAddress = this.lendingMock.address;
         this.maxDefaultDays = new BigNumber(100);
+        //10 with 2 decimals
+        this.maxReputation = new BigNumber(1000);
+        this.initialReputation = this.maxReputation.mul(0.5);
     });
 
     describe('Community decrement', function() {
         it('should burn 1% per day passed after 100 days max', async function() {
             const defaultDays = new BigNumber(1);
-            const initialReputation = new BigNumber(100);
+            const initialReputation = this.maxReputation.mul(0.5);
             const newRep = await this.reputation.burnCommunityReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
             var expectedRep = initialReputation.sub(initialReputation.mul(defaultDays).div(this.maxDefaultDays)).toNumber();
             expectedRep = Math.floor(expectedRep);
@@ -38,21 +41,47 @@ contract('EthicHubReputation', function ([owner, community, localNode]) {
         });
         it('should burn 10% per day passed after 100 days max', async function() {
             const defaultDays = new BigNumber(10);
-            const initialReputation = new BigNumber(100);
+            const initialReputation = this.maxReputation.mul(0.5);
             const newRep = await this.reputation.burnCommunityReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
             var expectedRep = initialReputation.sub(initialReputation.mul(defaultDays).div(this.maxDefaultDays)).toNumber();
             expectedRep = Math.floor(expectedRep);
             newRep.should.be.bignumber.equal(expectedRep);
         });
         it('should burn 100% per day passed after 100 days max', async function() {
-            const defaultDays = new BigNumber(100);
+            const defaultDays = this.maxReputation;
             const newRep = await this.reputation.burnCommunityReputation(defaultDays,this.maxDefaultDays, 100).should.be.fulfilled;
             newRep.should.be.bignumber.equal(0);
         });
     });
 
     describe('Community increment', function() {
-        it('should add 1/CompletedSameTierProjects');
+        it.only('should add 1/CompletedSameTierProjects', async function() {
+            var rep = this.initialReputation;
+            console.log("-----");
+            console.log("Initial reputation");
+            console.log(rep.toNumber());
+            for (var succesfulSameTierProjects=1;succesfulSameTierProjects<100;succesfulSameTierProjects++) {
+                const prevRep = rep;
+                rep = await this.reputation.incrementCommunityReputation(prevRep,succesfulSameTierProjects).should.be.fulfilled;
+                console.log("--> Projects same tier: "+succesfulSameTierProjects);
+                console.log("Rep: " + rep.toNumber());
+                const increment = new BigNumber(100).div(succesfulSameTierProjects);
+                const expectedRep = Math.floor(prevRep.add(increment).toNumber());
+                rep.should.be.bignumber.equal(expectedRep);
+            }
+
+        });
+
+        it.only('should not assign more than max reputation', async function() {
+            var prevRep = this.maxReputation.sub(1);
+            var newRep = await this.reputation.incrementCommunityReputation(prevRep,1).should.be.fulfilled;
+            newRep.should.be.bignumber.equal(this.maxReputation);
+
+        });
+
+        it.only('should fail to set reputation with no succesful projects in a tier', async function() {
+            await this.reputation.incrementCommunityReputation(500,0).should.be.rejectedWith(EVMRevert);
+        });
 
     });
 
