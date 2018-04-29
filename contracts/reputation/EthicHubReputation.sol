@@ -5,6 +5,10 @@ import '../math/SafeMath.sol';
 
 contract EthicHubReputation is EthicHubBase {
 
+    //10 with 2 decilmals
+    uint maxReputation = 1000;
+    uint reputationStep = 100;
+
     using SafeMath for uint;
 
     event ReputationUpdated(address indexed affected, uint newValue);
@@ -29,13 +33,25 @@ contract EthicHubReputation is EthicHubBase {
         emit ReputationUpdated(community, newCommunityReputation);
     }
 
-    function burnCommunityReputation(uint defaultDays, uint maxDefaultDays, uint prevReputation) view returns(uint) {
+    function incrementCommunityReputation(uint previousReputation, uint succesfulSametierProjects) view returns(uint) {
+        require(succesfulSametierProjects > 0);
+        uint nextRep = previousReputation.add(reputationStep / succesfulSametierProjects);
+        if (nextRep >= maxReputation) {
+            return maxReputation;
+        } else {
+            return nextRep;
+        }
+    }
+
+    function burnCommunityReputation(uint defaultDays, uint maxDefaultDays, uint prevReputation) pure returns(uint) {
         if (defaultDays < maxDefaultDays) {
             return prevReputation.sub(prevReputation.mul(defaultDays).div(maxDefaultDays));
         } else {
             return 0;
         }
     }
+
+
 
 
 }
