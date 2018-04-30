@@ -20,10 +20,6 @@ const EthicHubBase = artifacts.require('EthicHubBase');
 contract('EthicHubReputation', function ([owner, community, localNode]) {
     beforeEach(async function () {
         await advanceBlock();
-        this.mockStorage = await MockStorage.new();
-        this.reputation = await EthicHubReputation.new(this.mockStorage.address);
-        this.lendingMock = await EthicHubBase.new(this.mockStorage.address);
-        this.lendingAddress = this.lendingMock.address;
         this.maxDefaultDays = new BigNumber(100);
         //10 with 2 decimals
         this.maxReputation = new BigNumber(1000);
@@ -32,16 +28,31 @@ contract('EthicHubReputation', function ([owner, community, localNode]) {
         this.minimumPeopleCommunity = new BigNumber(20);
         this.minimumTier = new BigNumber(1);
         this.minimumProject = new BigNumber(1).mul(this.minimumPeopleCommunity);
+        //0.1
+        this.incrLocalNodeMultiplier = new BigNumber(100);
+        this.burnLocalNodeMultiplier = new BigNumber(100);
+
+        this.mockStorage = await MockStorage.new();
+        this.reputation = await EthicHubReputation.new(this.mockStorage.address, this.incrLocalNodeMultiplier, this.burnLocalNodeMultiplier);
+        this.lendingMock = await EthicHubBase.new(this.mockStorage.address);
+        this.lendingAddress = this.lendingMock.address;
+
     });
 
     describe('Community decrement', function() {
         it('should burn 1% per day passed after 100 days max', async function() {
-            const defaultDays = new BigNumber(1);
             const initialReputation = this.maxReputation.mul(0.5);
-            const newRep = await this.reputation.burnCommunityReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
-            var expectedRep = initialReputation.sub(initialReputation.mul(defaultDays).div(this.maxDefaultDays)).toNumber();
-            expectedRep = Math.floor(expectedRep);
-            newRep.should.be.bignumber.equal(expectedRep);
+            for (var defaultDays = 1; defaultDays<=100; defaultDays++) {
+                const newRep = await this.reputation.burnCommunityReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
+                //console.log("-----");
+                //console.log("DefaultDays: "+defaultDays);
+                //console.log("new rep: " +newRep.toNumber());
+                var expectedRep = initialReputation.sub(initialReputation.mul(defaultDays).div(this.maxDefaultDays)).toNumber();
+                expectedRep = Math.floor(expectedRep);
+                //console.log("expected rep: "+expectedRep)
+                newRep.should.be.bignumber.equal(expectedRep);
+            }
+
         });
         it('should burn 10% per day passed after 100 days max', async function() {
             const defaultDays = new BigNumber(10);
@@ -87,26 +98,49 @@ contract('EthicHubReputation', function ([owner, community, localNode]) {
     });
 
     describe('Local node increment', function() {
-        it.only('should increment correct number', async function() {
+        it('should increment correct number', async function() {
             var prevRep = this.initialReputation;
             var community = this.minimumPeopleCommunity;
             for(var tier = 1; tier <= 5; tier++) {
                 var newRep = await this.reputation.incrementLocalNodeReputation(prevRep,tier,community).should.be.fulfilled;
-
-                console.log(newRep);
-                newRep.should.be.bignumber.equal(prevRep.add(previousReputation.mul(tier).mul(community).div(this.minimumProject)));
+                //console.log("Tier: "+tier);
+                //console.log("New rep: "+ newRep.toNumber());
+                var increment = this.incrLocalNodeMultiplier.mul(new BigNumber(tier).mul(community)).div(this.minimumProject).div(100);
+                var expectedRep = prevRep.add(increment);
+                //console.log("Expected Rep: "+expectedRep);
+                newRep.should.be.bignumber.equal(expectedRep);
             }
         });
 
-        it.only('should not increment over max rep', async function() {
+        it('should not increment over max rep', async function() {
             var prevRep = this.maxReputation.sub(1);
-            var newRep = await this.reputation.incrementLocalNodeReputation(prevRep).should.be.fulfilled;
+            var newRep = await this.reputation.incrementLocalNodeReputation(prevRep,1,40).should.be.fulfilled;
             newRep.should.be.bignumber.equal(this.maxReputation);
         });
     });
 
     describe('Local node decrement', function() {
 
+        it.only('should burn 1% per day passed after 100 days max', async function() {
+            const initialReputation = this.maxReputation.mul(0.5);
+            for (var defaultDays = 1; defaultDays<=100; defaultDays++) {
+                const newRep = await this.reputation.burnLocalNodeReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
+                console.log("-----");
+                console.log("DefaultDays: "+defaultDays);
+                console.log("new rep: " +newRep.toNumber());
+                var expectedRep = initialReputation.sub(initialReputation.mul(defaultDays).div(this.maxDefaultDays)).toNumber();
+                expectedRep = Math.floor(expectedRep);
+                //console.log("expected rep: "+expectedRep)
+                newRep.should.be.bignumber.equal(expectedRep);
+            }
+
+        });
+
+        it('should burn 100% per day passed after 100 days max', async function() {
+            const defaultDays = this.maxReputation;
+            const newRep = await this.reputation.burnCommunityReputation(defaultDays,this.maxDefaultDays, 100).should.be.fulfilled;
+            newRep.should.be.bignumber.equal(0);
+        });
 
     });
 
