@@ -8,6 +8,8 @@ contract EthicHubReputation is EthicHubBase {
     //10 with 2 decilmals
     uint maxReputation = 1000;
     uint reputationStep = 100;
+    //Tier 1 x 20 people
+    uint minProyect = 20;
 
     using SafeMath for uint;
 
@@ -36,6 +38,15 @@ contract EthicHubReputation is EthicHubBase {
     function incrementCommunityReputation(uint previousReputation, uint succesfulSametierProjects) view returns(uint) {
         require(succesfulSametierProjects > 0);
         uint nextRep = previousReputation.add(reputationStep / succesfulSametierProjects);
+        if (nextRep >= maxReputation) {
+            return maxReputation;
+        } else {
+            return nextRep;
+        }
+    }
+
+    function incrementLocalNodeReputation(uint previousReputation, uint tier, uint borrowers) view returns(uint) {
+        uint nextRep = previousReputation.add(previousReputation.mul(5).mul(tier).mul(borrowers).div(minProyect).div(100));
         if (nextRep >= maxReputation) {
             return maxReputation;
         } else {

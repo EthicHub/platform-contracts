@@ -28,6 +28,10 @@ contract('EthicHubReputation', function ([owner, community, localNode]) {
         //10 with 2 decimals
         this.maxReputation = new BigNumber(1000);
         this.initialReputation = this.maxReputation.mul(0.5);
+
+        this.minimumPeopleCommunity = new BigNumber(20);
+        this.minimumTier = new BigNumber(1);
+        this.minimumProject = new BigNumber(1).mul(this.minimumPeopleCommunity);
     });
 
     describe('Community decrement', function() {
@@ -55,39 +59,59 @@ contract('EthicHubReputation', function ([owner, community, localNode]) {
     });
 
     describe('Community increment', function() {
-        it.only('should add 1/CompletedSameTierProjects', async function() {
+        it('should add 1/CompletedSameTierProjects', async function() {
             var rep = this.initialReputation;
-            console.log("-----");
-            console.log("Initial reputation");
-            console.log(rep.toNumber());
+            //console.log("-----");
+            //console.log("Initial reputation");
+            //console.log(rep.toNumber());
             for (var succesfulSameTierProjects=1;succesfulSameTierProjects<100;succesfulSameTierProjects++) {
                 const prevRep = rep;
                 rep = await this.reputation.incrementCommunityReputation(prevRep,succesfulSameTierProjects).should.be.fulfilled;
-                console.log("--> Projects same tier: "+succesfulSameTierProjects);
-                console.log("Rep: " + rep.toNumber());
+                //console.log("--> Projects same tier: "+succesfulSameTierProjects);
+                //console.log("Rep: " + rep.toNumber());
                 const increment = new BigNumber(100).div(succesfulSameTierProjects);
                 const expectedRep = Math.floor(prevRep.add(increment).toNumber());
                 rep.should.be.bignumber.equal(expectedRep);
             }
-
         });
 
-        it.only('should not assign more than max reputation', async function() {
+        it('should not assign more than max reputation', async function() {
             var prevRep = this.maxReputation.sub(1);
             var newRep = await this.reputation.incrementCommunityReputation(prevRep,1).should.be.fulfilled;
             newRep.should.be.bignumber.equal(this.maxReputation);
-
         });
 
-        it.only('should fail to set reputation with no succesful projects in a tier', async function() {
+        it('should fail to set reputation with no succesful projects in a tier', async function() {
             await this.reputation.incrementCommunityReputation(500,0).should.be.rejectedWith(EVMRevert);
         });
+    });
+
+    describe('Local node increment', function() {
+        it.only('should increment correct number', async function() {
+            var prevRep = this.initialReputation;
+            var community = this.minimumPeopleCommunity;
+            for(var tier = 1; tier <= 5; tier++) {
+                var newRep = await this.reputation.incrementLocalNodeReputation(prevRep,tier,community).should.be.fulfilled;
+
+                console.log(newRep);
+                newRep.should.be.bignumber.equal(prevRep.add(previousReputation.mul(tier).mul(community).div(this.minimumProject)));
+            }
+        });
+
+        it.only('should not increment over max rep', async function() {
+            var prevRep = this.maxReputation.sub(1);
+            var newRep = await this.reputation.incrementLocalNodeReputation(prevRep).should.be.fulfilled;
+            newRep.should.be.bignumber.equal(this.maxReputation);
+        });
+    });
+
+    describe('Local node decrement', function() {
+
 
     });
 
     describe('From storage -> community burn', function() {
         it('should burn 1% per day passed after 100 days max', async function() {
-
             await this.mockStorage.setUint(utils.soliditySha3("lending.maxDefaultDays", this.lendingAddress),this.maxDefaultDays);
             const defaultDays = new BigNumber(1);
             await this.mockStorage.setUint(utils.soliditySha3("lending.defaultDays", this.lendingAddress),defaultDays);
