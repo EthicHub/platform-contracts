@@ -1,15 +1,17 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.23;
 
-import "./EthicHubBase.sol";
+
 import "./math/SafeMath.sol";
 import "./lifecycle/Pausable.sol";
 import "./ownership/Ownable.sol";
 import "./reputation/EthicHubReputationInterface.sol";
+import "../EthicHubBase.sol";
 
-contract EthicHubLending is EthicHubBase, Ownable, Pausable {
+contract EthicHubLending is EthicHubLendingPersistance, Ownable, Pausable {
     using SafeMath for uint256;
     uint256 public minContribAmount = 0.1 ether;                          // 0.01 ether
     enum LendingState {
+        Uninitialized,
         AcceptingContributions,
         ExchangingToFiat,
         AwaitingReturn,
@@ -52,31 +54,46 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     event onReturnRateSet(uint rate);
 
 
-    function Lending(
+    function EthicHubLending(
         uint _fundingStartTime,
         uint _fundingEndTime,
         address _borrower,
         uint _lendingInterestRatePercentage,
         uint _totalLendingAmount,
-        uint256 _lendingDays
+        uint256 _lendingDays,
+        address _storageAddress
         )
         EthicHubBase(_storageAddress)
         public {
 
         version = 1;
         fundingStartTime = _fundingStartTime;
+        require(_fundingEndTime > fundingStartTime);
         fundingEndTime = _fundingEndTime;
+        require(_borrowe != address(0));
         borrower = _borrower;
         // 115
         lendingInterestRatePercentage = _lendingInterestRatePercentage;
+        require(totalLendingAmount > 0);
         totalLendingAmount = _totalLendingAmount;
         //90 days for version 0.1
+        require(_lendingDays > 0);
         lendingDays = _lendingDays;
 
-        reputation = EthicHubReputation(ethicHubStorage.getAddress(keccak256("lending.community", lendingContract)))
-        saveInitialParametersToStorage();
+        reputation = EthicHubReputationInterface(ethicHubStorage.getAddress(keccak256("contract.name", "reputation"));
+        require(reputation != address(0));
+        state = LendingState.Uninitialized;
+    }
+
+    function saveInitialParametersToStorage(uint _maxDefaultDays) external onlyOwner {
+        require(maxDefaultDays != 0);
+        ethicHubStorage.setUint(keccak256("lending.maxDefaultDays", this) _maxDefaultDays));
+        ethicHubStorage.setAddress(keccak256("lending.community",this), borrower));
+        ethicHubStorage.setAddress(keccak256("lending.localNode",this), msg.sender));
+
         state = LendingState.AcceptingContributions;
         emit StateChange(uint(state));
+
     }
 
     function() public payable whenNotPaused {
@@ -99,8 +116,6 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         state = LendingState.ProjectNotFunded;
         emit StateChange(uint(state));
     }
-
-
 
     function setBorrowerReturnEthPerFiatRate(uint256 _borrowerReturnEthPerFiatRate) external onlyOwner {
         require(state == LendingState.AwaitingReturn);
@@ -144,6 +159,9 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.AwaitingReturn);
         require(borrowerReturnEthPerFiatRate > 0);
         require(msg.value == borrowerReturnAmount);
+
+
+
         state = LendingState.ContributionReturned;
         emit StateChange(uint(state));
     }
@@ -213,8 +231,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         borrower.transfer(totalContributed);
     }
 
-    function saveInitialParametersToStorage() internal private {
 
-    }
+
 
 }
