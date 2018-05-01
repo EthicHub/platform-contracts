@@ -26,18 +26,64 @@ contract EthicHubReputation is EthicHubBase {
       version = 1;
     }
 
-    function burnReputation(address _lendingContract) external {
+    function burnReputation() external {
+        address lendingContract = msg.sender;
         //Get temporal parameters
-        uint maxDefaultDays = ethicHubStorage.getUint(keccak256("lending.maxDefaultDays", _lendingContract));
-        uint defaultDays = ethicHubStorage.getUint(keccak256("lending.defaultDays", _lendingContract));
-        //Affected community
-        address community = ethicHubStorage.getAddress(keccak256("lending.community", _lendingContract));
+        uint maxDefaultDays = ethicHubStorage.getUint(keccak256("lending.maxDefaultDays", lendingContract));
+        require(maxDefaultDays != 0);
+        uint defaultDays = ethicHubStorage.getUint(keccak256("lending.defaultDays", lendingContract));
+        require(defaultDays != 0);
+
+        //Affected players
+        address community = ethicHubStorage.getAddress(keccak256("lending.community", lendingContract));
         require(community != address(0));
+        //Affected local node
+        address localNode = ethicHubStorage.getAddress(keccak256("lending.localNode", lendingContract));
+        require(localNode != address(0));
+
+        //***** Community
         uint previousCommunityReputation = ethicHubStorage.getUint(keccak256("community.reputation", community));
         //Calculation and update
         uint newCommunityReputation = burnCommunityReputation(defaultDays, maxDefaultDays, previousCommunityReputation);
         ethicHubStorage.setUint(keccak256("community.reputation", community), newCommunityReputation);
         emit ReputationUpdated(community, newCommunityReputation);
+
+        //***** Local node
+        uint previousLocalNodeReputation = ethicHubStorage.getUint(keccak256("localNode.reputation", localNode));
+        uint newLocalNodeReputation = burnLocalNodeReputation(defaultDays, maxDefaultDays, previousLocalNodeReputation);
+        ethicHubStorage.setUint(keccak256("localNode.reputation", localNode), newLocalNodeReputation);
+        emit ReputationUpdated(localNode, newLocalNodeReputation);
+
+    }
+
+    function incrementReputation() external {
+        address lendingContract = msg.sender;
+        //Affected players
+        address community = ethicHubStorage.getAddress(keccak256("lending.community", lendingContract));
+        require(community != address(0));
+        //Affected local node
+        address localNode = ethicHubStorage.getAddress(keccak256("lending.localNode", lendingContract));
+        require(localNode != address(0));
+
+        //Tier
+        uint projectTier = ethicHubStorage.getUint(keccak256("lending.tier", lendingContract));
+        require(projectTier > 0);
+        uint succesfulProjectsInTier = ethicHubStorage.getUint(keccak256("community.completedProjects.tier", projectTier));
+        require(succesfulProjectsInTier > 1);
+
+        //***** Community
+        uint previousCommunityReputation = ethicHubStorage.getUint(keccak256("community.reputation", community));
+        //Calculation and update
+        uint newCommunityReputation = incrementCommunityReputation(previousCommunityReputation, succesfulProjectsInTier);
+        ethicHubStorage.setUint(keccak256("community.reputation", community), newCommunityReputation);
+        emit ReputationUpdated(community, newCommunityReputation);
+
+        //***** Local node
+        uint borrowers = ethicHubStorage.getUint(keccak256("lending.borrowers", lendingContract));
+        uint previousLocalNodeReputation = ethicHubStorage.getUint(keccak256("localNode.reputation", localNode));
+        uint newLocalNodeReputation = incrementLocalNodeReputation(previousLocalNodeReputation, projectTier, borrowers);
+        ethicHubStorage.setUint(keccak256("localNode.reputation", localNode), newLocalNodeReputation);
+        emit ReputationUpdated(localNode, newLocalNodeReputation);
     }
 
     function incrementCommunityReputation(uint previousReputation, uint succesfulSametierProjects) view returns(uint) {

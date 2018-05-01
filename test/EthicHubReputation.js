@@ -17,7 +17,7 @@ const MockStorage = artifacts.require('./helper_contracts/MockStorage.sol')
 const EthicHubReputation = artifacts.require('EthicHubReputation');
 const EthicHubBase = artifacts.require('EthicHubBase');
 
-contract('EthicHubReputation', function ([owner, community, localNode]) {
+contract('EthicHubReputation', function ([owner, community, localNode, lendingContract]) {
     beforeEach(async function () {
         await advanceBlock();
         this.maxDefaultDays = new BigNumber(100);
@@ -34,8 +34,6 @@ contract('EthicHubReputation', function ([owner, community, localNode]) {
 
         this.mockStorage = await MockStorage.new();
         this.reputation = await EthicHubReputation.new(this.mockStorage.address);
-        this.lendingMock = await EthicHubBase.new(this.mockStorage.address);
-        this.lendingAddress = this.lendingMock.address;
 
     });
 
@@ -112,6 +110,17 @@ contract('EthicHubReputation', function ([owner, community, localNode]) {
             }
         });
 
+        it('should increment correct number with more members in the community', async function() {
+            var prevRep = this.initialReputation;
+            var community = new BigNumber(100);
+            var tier = 3;
+            var newRep = await this.reputation.incrementLocalNodeReputation(prevRep,3,community).should.be.fulfilled;
+            var increment = (new BigNumber(tier).mul(community).div(this.minimumProject)).mul(this.incrLocalNodeMultiplier);//.div(1000);
+            var expectedRep = prevRep.add(increment);
+            newRep.should.be.bignumber.equal(expectedRep);
+
+        });
+
         it('should not increment over max rep', async function() {
             var prevRep = this.maxReputation.sub(1);
             var newRep = await this.reputation.incrementLocalNodeReputation(prevRep,1,40).should.be.fulfilled;
@@ -153,36 +162,209 @@ contract('EthicHubReputation', function ([owner, community, localNode]) {
 
         });
 
+        it('should not burn less than 0', async function() {
+            const initialReputation = new BigNumber(0);
+            var defaultDays = 1;
+            var newRep = await this.reputation.burnLocalNodeReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
+
+            newRep.should.be.bignumber.equal(initialReputation);
+        });
+
+
 
     });
 
-    describe('From storage -> community burn', function() {
-        it('should burn 1% per day passed after 100 days max', async function() {
-            await this.mockStorage.setUint(utils.soliditySha3("lending.maxDefaultDays", this.lendingAddress),this.maxDefaultDays);
+    describe('From storage -> Burn', function() {
+        it('Should burn reputation', async function() {
+            await this.mockStorage.setUint(utils.soliditySha3("lending.maxDefaultDays", lendingContract),this.maxDefaultDays);
             const defaultDays = new BigNumber(1);
-            await this.mockStorage.setUint(utils.soliditySha3("lending.defaultDays", this.lendingAddress),defaultDays);
-            await this.mockStorage.setAddress(utils.soliditySha3("lending.community", this.lendingAddress),community);
-            const initialReputation = new BigNumber(100);
-            await this.mockStorage.setUint(utils.soliditySha3("community.reputation", community),initialReputation);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.defaultDays", lendingContract),defaultDays);
+            await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
+            await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
+            const initialCommunityReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("community.reputation", community),initialCommunityReputation);
+            const initialLocalNodeReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("localNode.reputation", localNode),initialLocalNodeReputation);
 
-            await this.reputation.burnReputation(this.lendingMock.address).should.be.fulfilled;
+            await this.reputation.burnReputation({from: lendingContract}).should.be.fulfilled;
 
+            //Community rep
             const rep = await this.mockStorage.getUint(utils.soliditySha3("community.reputation", community)).should.be.fulfilled;
-            var expectedRep = initialReputation.sub(initialReputation.mul(defaultDays).div(this.maxDefaultDays)).toNumber();
+            var expectedRep = initialCommunityReputation.sub(initialCommunityReputation.mul(defaultDays).div(this.maxDefaultDays)).toNumber();
             expectedRep = Math.floor(expectedRep);
             rep.should.be.bignumber.equal(expectedRep);
+
+            //Local Node rep
+            var newRep = await this.mockStorage.getUint(utils.soliditySha3("localNode.reputation", localNode)).should.be.fulfilled;
+            var decrement = initialLocalNodeReputation.mul(defaultDays).div(this.maxDefaultDays);
+            var expectedRep = initialLocalNodeReputation.sub(decrement).toNumber();
+            expectedRep = Math.floor(expectedRep);
+            newRep.should.be.bignumber.equal(expectedRep);
         });
 
-        it('should burn 100% per day passed after 100 days max', async function() {
-            await this.mockStorage.setUint(utils.soliditySha3("lending.maxDefaultDays", this.lendingAddress),this.maxDefaultDays);
-            await this.mockStorage.setUint(utils.soliditySha3("lending.defaultDays", this.lendingAddress),this.maxDefaultDays);
-            await this.mockStorage.setAddress(utils.soliditySha3("lending.community", this.lendingAddress),community);
-            await this.mockStorage.setUint(utils.soliditySha3("community.reputation", community),100);
+        it('Lending contract should have a community', async function() {
+            await this.mockStorage.setUint(utils.soliditySha3("lending.maxDefaultDays", lendingContract),this.maxDefaultDays);
+            const defaultDays = new BigNumber(1);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.defaultDays", lendingContract),defaultDays);
+            //await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
+            await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
+            const initialCommunityReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("community.reputation", community),initialCommunityReputation);
+            const initialLocalNodeReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("localNode.reputation", localNode),initialLocalNodeReputation);
 
-            await this.reputation.burnReputation(this.lendingMock.address).should.be.fulfilled;
-
-            const rep = await this.mockStorage.getUint(utils.soliditySha3("community.reputation", community)).should.be.fulfilled;
-            rep.should.be.bignumber.equal(0);
+            await this.reputation.burnReputation({from: lendingContract}).should.be.rejectedWith(EVMRevert);
         });
+
+        it('Lending contract should have a localNode', async function() {
+            await this.mockStorage.setUint(utils.soliditySha3("lending.maxDefaultDays", lendingContract),this.maxDefaultDays);
+            const defaultDays = new BigNumber(1);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.defaultDays", lendingContract),defaultDays);
+            await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
+            //await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
+            const initialCommunityReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("community.reputation", community),initialCommunityReputation);
+            const initialLocalNodeReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("localNode.reputation", localNode),initialLocalNodeReputation);
+
+            await this.reputation.burnReputation({from: lendingContract}).should.be.rejectedWith(EVMRevert);
+        });
+
+        it('Lending should have a maxDefaultDays localNode', async function() {
+            //await this.mockStorage.setUint(utils.soliditySha3("lending.maxDefaultDays", lendingContract),this.maxDefaultDays);
+            const defaultDays = new BigNumber(1);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.defaultDays", lendingContract),defaultDays);
+            await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
+            await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
+            const initialCommunityReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("community.reputation", community),initialCommunityReputation);
+            const initialLocalNodeReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("localNode.reputation", localNode),initialLocalNodeReputation);
+
+            await this.reputation.burnReputation({from: lendingContract}).should.be.rejectedWith(EVMRevert);
+        });
+
+        it('Lending contract should be in default', async function() {
+            await this.mockStorage.setUint(utils.soliditySha3("lending.maxDefaultDays", lendingContract),this.maxDefaultDays);
+            const defaultDays = new BigNumber(1);
+            //await this.mockStorage.setUint(utils.soliditySha3("lending.defaultDays", lendingContract),defaultDays);
+            await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
+            await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
+            const initialCommunityReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("community.reputation", community),initialCommunityReputation);
+            const initialLocalNodeReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("localNode.reputation", localNode),initialLocalNodeReputation);
+
+            await this.reputation.burnReputation({from: lendingContract}).should.be.rejectedWith(EVMRevert);
+        });
+
+    });
+
+    describe('From storage -> increase', function() {
+        it.only('Should increase reputation', async function() {
+
+            const projectTier = new BigNumber(1);
+            const previouslyCompletedProjects = new BigNumber(3);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
+            await this.mockStorage.setUint(utils.soliditySha3("community.completedProjects.tier", projectTier), previouslyCompletedProjects);
+
+            await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
+
+            await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
+            await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
+            const initialCommunityReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("community.reputation", community),initialCommunityReputation);
+            const initialLocalNodeReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("localNode.reputation", localNode),initialLocalNodeReputation);
+
+            await this.reputation.incrementReputation({from: lendingContract}).should.be.fulfilled;
+
+            //Community rep
+            var rep = await this.mockStorage.getUint(utils.soliditySha3("community.reputation", community)).should.be.fulfilled;
+            var increment = new BigNumber(100).div(previouslyCompletedProjects);
+            var expectedRep = Math.floor(initialCommunityReputation.add(increment).toNumber());
+            rep.should.be.bignumber.equal(expectedRep);
+
+            //Local Node rep
+            var newLocalRep = await this.mockStorage.getUint(utils.soliditySha3("localNode.reputation", localNode)).should.be.fulfilled;
+            increment = (new BigNumber(projectTier).mul(this.minimumPeopleCommunity).div(this.minimumProject)).mul(this.incrLocalNodeMultiplier);//.div(1000);
+            expectedRep = initialLocalNodeReputation.add(increment);
+            //console.log("Expected Rep: "+expectedRep);
+            newLocalRep.should.be.bignumber.equal(expectedRep);
+        });
+        it.only('Should fail without a community', async function() {
+            const projectTier = new BigNumber(1);
+            const previouslyCompletedProjects = new BigNumber(3);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
+            await this.mockStorage.setUint(utils.soliditySha3("community.completedProjects.tier", projectTier), previouslyCompletedProjects);
+
+            await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
+
+            //await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
+            await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
+            const initialCommunityReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("community.reputation", community),initialCommunityReputation);
+            const initialLocalNodeReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("localNode.reputation", localNode),initialLocalNodeReputation);
+
+            await this.reputation.incrementReputation({from: lendingContract}).should.be.rejectedWith(EVMRevert);
+        });
+
+        it.only('Should fail without a localNode', async function() {
+            const projectTier = new BigNumber(1);
+            const previouslyCompletedProjects = new BigNumber(3);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
+            await this.mockStorage.setUint(utils.soliditySha3("community.completedProjects.tier", projectTier), previouslyCompletedProjects);
+
+            await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
+
+            await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
+            //await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
+            const initialCommunityReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("community.reputation", community),initialCommunityReputation);
+            const initialLocalNodeReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("localNode.reputation", localNode),initialLocalNodeReputation);
+
+            await this.reputation.incrementReputation({from: lendingContract}).should.be.rejectedWith(EVMRevert);
+        });
+
+        it.only('Should fail without an assigned tier in lending', async function() {
+            const projectTier = new BigNumber(1);
+            const previouslyCompletedProjects = new BigNumber(3);
+            //await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
+            await this.mockStorage.setUint(utils.soliditySha3("community.completedProjects.tier", projectTier), previouslyCompletedProjects);
+
+            await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
+
+            await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
+            await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
+            const initialCommunityReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("community.reputation", community),initialCommunityReputation);
+            const initialLocalNodeReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("localNode.reputation", localNode),initialLocalNodeReputation);
+
+            await this.reputation.incrementReputation({from: lendingContract}).should.be.rejectedWith(EVMRevert);
+        });
+
+        it.only('Should fail without a succesful project', async function() {
+            const projectTier = new BigNumber(1);
+            const previouslyCompletedProjects = new BigNumber(3);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
+            //await this.mockStorage.setUint(utils.soliditySha3("community.completedProjects.tier", projectTier), previouslyCompletedProjects);
+
+            await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
+
+            await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
+            await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
+            const initialCommunityReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("community.reputation", community),initialCommunityReputation);
+            const initialLocalNodeReputation = new BigNumber(500);
+            await this.mockStorage.setUint(utils.soliditySha3("localNode.reputation", localNode),initialLocalNodeReputation);
+
+            await this.reputation.incrementReputation({from: lendingContract}).should.be.rejectedWith(EVMRevert);
+        });
+
+
+
     });
 });
