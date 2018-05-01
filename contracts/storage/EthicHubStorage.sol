@@ -15,7 +15,7 @@ contract EthicHubStorage {
 	mapping(bytes32 => bytes) internal bytesStorage;
 	mapping(bytes32 => bool) internal boolStorage;
 	mapping(bytes32 => int256) internal intStorage;
-    
+
 
 
     /*** Modifiers ************/
@@ -23,12 +23,12 @@ contract EthicHubStorage {
     /// @dev Only allow access from the latest version of a contract in the Rocket Pool network after deployment
     modifier onlyEthicHubContracts() {
         // Maje sure the access is permitted to only contracts in our Dapp
-        require(addressStorage[keccak256("ethichub.contract", msg.sender)] != 0x0);
+        require(addressStorage[keccak256("contract.address", msg.sender)] != 0x0);
         _;
     }
 
     constructor() public {
-		addressStorage[keccak256("ethichub.contract", msg.sender)] = msg.sender;
+		addressStorage[keccak256("contract.address", msg.sender)] = msg.sender;
     }
 
 	/**** Get Methods ***********/

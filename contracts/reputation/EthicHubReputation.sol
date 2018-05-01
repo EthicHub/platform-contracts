@@ -2,6 +2,7 @@ pragma solidity ^0.4.23;
 
 import '../EthicHubBase.sol';
 import '../math/SafeMath.sol';
+import './EthicHubReputationInterface.sol';
 
 contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
 

@@ -4,36 +4,39 @@ import "./ownership/Ownable.sol";
 import "./EthicHubBase.sol";
 
 /**
- * @title EthichubCMC 
+ * @title EthichubCMC
  * @dev This contract manage ethichub contracts creation and update.
  */
 
 contract EthicHubCMC is EthicHubBase, Ownable {
 
+    event ContractUpgraded (
+        address indexed _oldContractAddress,                    // Address of the contract being upgraded
+        address indexed _newContractAddress,                    // Address of the new contract
+        uint256 created                                         // Creation timestamp
+    );
 
     constructor(address _storageAddress) EthicHubBase(_storageAddress) public {
         // Version
         version = 1;
-    } 
-
-    function registerEthicHubContract(address _address) internal{
-        ethicHubStorage.setAddress(keccak256("ethichub.contract", _address), _address);
     }
 
-    function deleteEthicHubContract(address _address) internal{
-        ethicHubStorage.deleteAddress(keccak256("ethichub.contract", _address));
+    function registerEthicHubContract(address _address, string _contractName) internal{
+        ethicHubStorage.setAddress(keccak256("contract.name", _contractName), _address);
+
+
     }
-    
-    function addNewLendingContract(address lendingAddress) public onlyOwner{
+
+    function addNewLendingContract(address _lendingAddress) public onlyOwner{
         //create current reputation address
-        registerEthicHubContract(lendingAddress);
+        ethicHubStorage.setAddress(keccak256("contract.address", _lendingAddress), _lendingAddress);
     }
 
-    function addNewReputationContract(address reputationAddress) public onlyOwner{
-        registerEthicHubContract(reputationAddress);
-        address oldReputationAddress = ethicHubStorage.getAddress(keccak256("ethichub.contract.reputation"));
-        deleteEthicHubContract(oldReputationAddress);
-        // update new reputation address
-        ethicHubStorage.setAddress(keccak256("ethichub.contract.reputation") , reputationAddress);
+    function upgradeContract(address _newContractAddress, string _contractName) public onlyOwner{
+        address oldAddress = ethicHubStorage.getAddress(keccak256("contract.name", _contractName));
+        ethicHubStorage.setAddress(keccak256("contract.address", _newContractAddress), _newContractAddress);
+        ethicHubStorage.setAddress(keccak256("contract.name", _contractName), _newContractAddress);
+        ethicHubStorage.deleteAddress(keccak256("contract.address", oldAddress));
+        emit ContractUpgraded(oldAddress, _newContractAddress, now);
     }
 }
