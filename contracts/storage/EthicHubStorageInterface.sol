@@ -8,7 +8,8 @@ pragma solidity ^0.4.21;
  */
 contract EthicHubStorageInterface {
 
-    //TODO modifier for access in sets and deletes
+    //modifier for access in sets and deletes
+    modifier onlyEthicHubContracts() {_;}
 
     // Setters
     function setAddress(bytes32 _key, address _value) external;
