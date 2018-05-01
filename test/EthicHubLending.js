@@ -6,12 +6,14 @@ import latestTime from './helpers/latestTime'
 import EVMRevert from './helpers/EVMRevert'
 
 const BigNumber = web3.BigNumber
-const utils = web3._extend.utils;
-const AcceptingContributions = 0;
-const ExchangingToFiat = 1;
-const AwaitingReturn = 2;
-const ProjectNotFunded = 3;
-const ContributionReturned = 4;
+const web3_1_0 = require('web3');
+const utils = web3_1_0.utils;
+const Uninitialized = 0;
+const AcceptingContributions = 1;
+const ExchangingToFiat = 2;
+const AwaitingReturn = 3;
+const ProjectNotFunded = 4;
+const ContributionReturned = 5;
 
 const should = require('chai')
   .use(require('chai-as-promised'))
@@ -20,6 +22,8 @@ const should = require('chai')
 
 
 const EthicHubLending = artifacts.require('EthicHubLending');
+const MockStorage = artifacts.require('./helper_contracts/MockStorage.sol');
+const MockReputation = artifacts.require('./helper_contracts/MockReputation.sol');
 
 contract('EthicHubLending', function ([owner, borrower, investor, investor2, investor3, investor4, investor5, wallet]) {
     beforeEach(async function () {
@@ -29,11 +33,48 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
         this.fundingEndTime = this.fundingStartTime + duration.days(40);
         this.lendingInterestRatePercentage = 115;
         this.totalLendingAmount = ether(3);
+        this.tier = 1;
         //400 pesos per eth
         this.initialEthPerFiatRate = 400;
         this.finalEthPerFiatRate = 500;
         this.lendingDays = 90;
-        this.lending = await Lending.new(this.fundingStartTime, this.fundingEndTime, borrower, this.lendingInterestRatePercentage, this.totalLendingAmount,  this.lendingDays);
+        this.defaultMaxDays = 90;
+
+        this.mockStorage = await MockStorage.new();
+        this.mockReputation = await MockReputation.new();
+        console.log(this.mockReputation.address);
+        await this.mockStorage.setAddress(utils.soliditySha3("contract.name", "reputation"),this.mockReputation.address);
+        this.lending = await EthicHubLending.new(
+                                                this.fundingStartTime,
+                                                this.fundingEndTime,
+                                                borrower,
+                                                this.lendingInterestRatePercentage,
+                                                this.totalLendingAmount,
+                                                this.lendingDays,
+                                                this.mockStorage.address
+                                            );
+        this.lending.saveInitialParametersToStorage(this.defaultMaxDays, this.tier);
+    });
+
+    describe('initializing', function() {
+        it('should not allow to invest before initializing', async function () {
+            var someLending = await EthicHubLending.new(
+                                                    this.fundingStartTime,
+                                                    this.fundingEndTime,
+                                                    borrower,
+                                                    this.lendingInterestRatePercentage,
+                                                    this.totalLendingAmount,
+                                                    this.lendingDays,
+                                                    this.mockStorage.address
+                                                );
+            await increaseTimeTo(this.fundingStartTime - duration.days(0.5))
+            var isRunning = await someLending.isContribPeriodRunning();
+            var state = await someLending.state();
+            // project not funded
+            state.toNumber().should.be.equal(Uninitialized);
+            isRunning.should.be.equal(false);
+            await someLending.sendTransaction({value:ether(1), from: investor}).should.be.rejectedWith(EVMRevert);
+        });
     });
 
     describe('contributing', function() {

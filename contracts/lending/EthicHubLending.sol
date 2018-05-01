@@ -74,7 +74,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         borrower = _borrower;
         // 115
         lendingInterestRatePercentage = _lendingInterestRatePercentage;
-        require(totalLendingAmount > 0);
+        require(_totalLendingAmount > 0);
         totalLendingAmount = _totalLendingAmount;
         //90 days for version 0.1
         require(_lendingDays > 0);
