@@ -19,12 +19,13 @@ contract EthicHubReputation is EthicHubBase {
 
     event ReputationUpdated(address indexed affected, uint newValue);
 
+    event Log(uint value);
+
     /// @dev constructor
-    function EthicHubReputation(address _storageAddress, uint _incrLocalNodeMultiplier, uint _burnLocalNodeMultiplier) EthicHubBase(_storageAddress) public {
+    function EthicHubReputation(address _storageAddress, uint _incrLocalNodeMultiplier) EthicHubBase(_storageAddress) public {
       // Version
       version = 1;
       incrLocalNodeMultiplier = _incrLocalNodeMultiplier;
-      burnLocalNodeMultiplier = _burnLocalNodeMultiplier;
     }
 
     function burnReputation(address _lendingContract) external {
@@ -62,10 +63,11 @@ contract EthicHubReputation is EthicHubBase {
     }
 
     function burnLocalNodeReputation(uint defaultDays, uint maxDefaultDays, uint prevReputation) view returns(uint) {
-        if (defaultDays < maxDefaultDays) {
-            return prevReputation.sub(burnLocalNodeMultiplier.mul(prevReputation.mul(defaultDays).div(maxDefaultDays)).div(100));
+        uint decrement = prevReputation.mul(defaultDays).div(maxDefaultDays);
+        if (defaultDays < maxDefaultDays && decrement < reputationStep) {
+            return prevReputation.sub(decrement);
         } else {
-            return 0;
+            return prevReputation.sub(reputationStep);
         }
     }
 

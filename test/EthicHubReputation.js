@@ -23,6 +23,7 @@ contract('EthicHubReputation', function ([owner, community, localNode]) {
         this.maxDefaultDays = new BigNumber(100);
         //10 with 2 decimals
         this.maxReputation = new BigNumber(1000);
+        this.reputationStep = new BigNumber(100);
         this.initialReputation = this.maxReputation.mul(0.5);
 
         this.minimumPeopleCommunity = new BigNumber(20);
@@ -30,10 +31,9 @@ contract('EthicHubReputation', function ([owner, community, localNode]) {
         this.minimumProject = new BigNumber(1).mul(this.minimumPeopleCommunity);
         //0.1
         this.incrLocalNodeMultiplier = new BigNumber(100);
-        this.burnLocalNodeMultiplier = new BigNumber(100);
 
         this.mockStorage = await MockStorage.new();
-        this.reputation = await EthicHubReputation.new(this.mockStorage.address, this.incrLocalNodeMultiplier, this.burnLocalNodeMultiplier);
+        this.reputation = await EthicHubReputation.new(this.mockStorage.address, this.incrLocalNodeMultiplier);
         this.lendingMock = await EthicHubBase.new(this.mockStorage.address);
         this.lendingAddress = this.lendingMock.address;
 
@@ -121,26 +121,38 @@ contract('EthicHubReputation', function ([owner, community, localNode]) {
 
     describe('Local node decrement', function() {
 
-        it.only('should burn 1% per day passed after 100 days max', async function() {
+        it('should burn same as commnity, max 1 step (100) ', async function() {
             const initialReputation = this.maxReputation.mul(0.5);
-            for (var defaultDays = 1; defaultDays<=100; defaultDays++) {
-                const newRep = await this.reputation.burnLocalNodeReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
-                console.log("-----");
-                console.log("DefaultDays: "+defaultDays);
-                console.log("new rep: " +newRep.toNumber());
-                var expectedRep = initialReputation.sub(initialReputation.mul(defaultDays).div(this.maxDefaultDays)).toNumber();
-                expectedRep = Math.floor(expectedRep);
-                //console.log("expected rep: "+expectedRep)
-                newRep.should.be.bignumber.equal(expectedRep);
-            }
+            var defaultDays = 1;
+            var newRep = await this.reputation.burnLocalNodeReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
+            var decrement = initialReputation.mul(defaultDays).div(this.maxDefaultDays);
+            var expectedRep = initialReputation.sub(decrement).toNumber();
+            expectedRep = Math.floor(expectedRep);
+            newRep.should.be.bignumber.equal(expectedRep);
+
+            defaultDays = 10;
+            newRep = await this.reputation.burnLocalNodeReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
+            decrement = initialReputation.mul(defaultDays).div(this.maxDefaultDays);
+            expectedRep = initialReputation.sub(decrement).toNumber();
+            expectedRep = Math.floor(expectedRep);
+            newRep.should.be.bignumber.equal(expectedRep);
+
+            defaultDays = 60;
+            newRep = await this.reputation.burnLocalNodeReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
+            decrement = this.reputationStep;
+            expectedRep = initialReputation.sub(decrement).toNumber();
+            expectedRep = Math.floor(expectedRep);
+            newRep.should.be.bignumber.equal(expectedRep);
+
+            defaultDays = this.maxDefaultDays.add(1);
+            newRep = await this.reputation.burnLocalNodeReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
+            decrement = this.reputationStep;
+            expectedRep = initialReputation.sub(decrement).toNumber();
+            expectedRep = Math.floor(expectedRep);
+            newRep.should.be.bignumber.equal(expectedRep);
 
         });
 
-        it('should burn 100% per day passed after 100 days max', async function() {
-            const defaultDays = this.maxReputation;
-            const newRep = await this.reputation.burnCommunityReputation(defaultDays,this.maxDefaultDays, 100).should.be.fulfilled;
-            newRep.should.be.bignumber.equal(0);
-        });
 
     });
 
