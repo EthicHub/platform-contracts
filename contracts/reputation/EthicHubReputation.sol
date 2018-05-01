@@ -3,7 +3,7 @@ pragma solidity ^0.4.20;
 import '../EthicHubBase.sol';
 import '../math/SafeMath.sol';
 
-contract EthicHubReputation is EthicHubBase {
+contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
 
     //10 with 2 decilmals
     uint maxReputation = 1000;
