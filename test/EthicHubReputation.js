@@ -13,7 +13,7 @@ const should = require('chai')
   .use(require('chai-bignumber')(BigNumber))
   .should()
 
-const MockStorage = artifacts.require('./helper_contracts/MockStorage.sol')
+const MockStorage = artifacts.require('./helper_contracts/MockStorage.sol');
 const EthicHubReputation = artifacts.require('EthicHubReputation');
 const EthicHubBase = artifacts.require('EthicHubBase');
 
