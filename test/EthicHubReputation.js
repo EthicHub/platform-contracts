@@ -29,11 +29,11 @@ contract('EthicHubReputation', function ([owner, community, localNode]) {
         this.minimumPeopleCommunity = new BigNumber(20);
         this.minimumTier = new BigNumber(1);
         this.minimumProject = new BigNumber(1).mul(this.minimumPeopleCommunity);
-        //0.1
-        this.incrLocalNodeMultiplier = new BigNumber(100);
+        //0.05
+        this.incrLocalNodeMultiplier = new BigNumber(5);
 
         this.mockStorage = await MockStorage.new();
-        this.reputation = await EthicHubReputation.new(this.mockStorage.address, this.incrLocalNodeMultiplier);
+        this.reputation = await EthicHubReputation.new(this.mockStorage.address);
         this.lendingMock = await EthicHubBase.new(this.mockStorage.address);
         this.lendingAddress = this.lendingMock.address;
 
@@ -105,7 +105,7 @@ contract('EthicHubReputation', function ([owner, community, localNode]) {
                 var newRep = await this.reputation.incrementLocalNodeReputation(prevRep,tier,community).should.be.fulfilled;
                 //console.log("Tier: "+tier);
                 //console.log("New rep: "+ newRep.toNumber());
-                var increment = this.incrLocalNodeMultiplier.mul(new BigNumber(tier).mul(community)).div(this.minimumProject).div(100);
+                var increment = (new BigNumber(tier).mul(community).div(this.minimumProject)).mul(this.incrLocalNodeMultiplier);//.div(1000);
                 var expectedRep = prevRep.add(increment);
                 //console.log("Expected Rep: "+expectedRep);
                 newRep.should.be.bignumber.equal(expectedRep);

@@ -11,9 +11,8 @@ contract EthicHubReputation is EthicHubBase {
     //Tier 1 x 20 people
     uint minProyect = 20;
 
-    //0.01
-    uint incrLocalNodeMultiplier;
-    uint burnLocalNodeMultiplier;
+    //0.05
+    uint incrLocalNodeMultiplier = 5;
 
     using SafeMath for uint;
 
@@ -22,10 +21,9 @@ contract EthicHubReputation is EthicHubBase {
     event Log(uint value);
 
     /// @dev constructor
-    function EthicHubReputation(address _storageAddress, uint _incrLocalNodeMultiplier) EthicHubBase(_storageAddress) public {
+    function EthicHubReputation(address _storageAddress) EthicHubBase(_storageAddress) public {
       // Version
       version = 1;
-      incrLocalNodeMultiplier = _incrLocalNodeMultiplier;
     }
 
     function burnReputation(address _lendingContract) external {
@@ -53,7 +51,7 @@ contract EthicHubReputation is EthicHubBase {
     }
 
     function incrementLocalNodeReputation(uint previousReputation, uint tier, uint borrowers) view returns(uint) {
-        uint increment = incrLocalNodeMultiplier.mul(tier.mul(borrowers)).div(minProyect).div(100);
+        uint increment = (tier.mul(borrowers).div(minProyect)).mul(incrLocalNodeMultiplier);
         uint nextRep = previousReputation.add(increment);
         if (nextRep >= maxReputation) {
             return maxReputation;
