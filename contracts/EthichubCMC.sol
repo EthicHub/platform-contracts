@@ -21,18 +21,17 @@ contract EthicHubCMC is EthicHubBase, Ownable {
         version = 1;
     }
 
-    function registerEthicHubContract(address _address, string _contractName) internal{
+    /* function registerEthicHubContract(address _address, string _contractName)  {
         ethicHubStorage.setAddress(keccak256("contract.name", _contractName), _address);
+        ethicHubStorage.setAddress(keccak256("contract.address", _address), _address);
+    } */
 
-
-    }
-
-    function addNewLendingContract(address _lendingAddress) public onlyOwner{
+    function addNewLendingContract(address _lendingAddress) public onlyOwner {
         //create current reputation address
         ethicHubStorage.setAddress(keccak256("contract.address", _lendingAddress), _lendingAddress);
     }
 
-    function upgradeContract(address _newContractAddress, string _contractName) public onlyOwner{
+    function upgradeContract(address _newContractAddress, string _contractName) public onlyOwner {
         address oldAddress = ethicHubStorage.getAddress(keccak256("contract.name", _contractName));
         ethicHubStorage.setAddress(keccak256("contract.address", _newContractAddress), _newContractAddress);
         ethicHubStorage.setAddress(keccak256("contract.name", _contractName), _newContractAddress);

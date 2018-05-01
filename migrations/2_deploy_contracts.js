@@ -51,17 +51,16 @@ module.exports = async (deployer, network) => {
     return deployer.deploy(storage).then(() => {
         return deployer.deploy(cmc, storage.address).then(() => {
             return storage.deployed().then(async storageInstance => {
-                console.log(await storageInstance.getAddress(utils.soliditySha3("ethichub.contract", web3.eth.accounts[0])))
                 // using storage owner to add cmc in ethichub contract network
-                await storageInstance.setAddress(utils.soliditySha3("ethichub.contract", cmc.address), cmc.address)
-                console.log(await storageInstance.getAddress(utils.soliditySha3("ethichub.contract", web3.eth.accounts[0])))
+                await storageInstance.setAddress(utils.soliditySha3("contract.address", cmc.address), cmc.address)
+                console.log(await storageInstance.getAddress(utils.soliditySha3("contract.address", web3.eth.accounts[0])))
                 return deployer.deploy(reputation, storage.address).then(() => {
                    return cmc.deployed().then(async cmcInstance => {
-                        cmcInstance.addNewReputationContract(reputation.address)
+                        cmcInstance.upgradeContract(reputation.address,"reputation");
                     })
                 })
             })
         })
     })
-     
+
 };

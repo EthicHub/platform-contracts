@@ -1,13 +1,13 @@
 pragma solidity ^0.4.23;
 
 
-import "./math/SafeMath.sol";
-import "./lifecycle/Pausable.sol";
-import "./ownership/Ownable.sol";
-import "./reputation/EthicHubReputationInterface.sol";
+import "../math/SafeMath.sol";
+import "../lifecycle/Pausable.sol";
+import "../ownership/Ownable.sol";
+import "../reputation/EthicHubReputationInterface.sol";
 import "../EthicHubBase.sol";
 
-contract EthicHubLending is EthicHubLendingPersistance, Ownable, Pausable {
+contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     using SafeMath for uint256;
     uint256 public minContribAmount = 0.1 ether;                          // 0.01 ether
     enum LendingState {
@@ -70,7 +70,7 @@ contract EthicHubLending is EthicHubLendingPersistance, Ownable, Pausable {
         fundingStartTime = _fundingStartTime;
         require(_fundingEndTime > fundingStartTime);
         fundingEndTime = _fundingEndTime;
-        require(_borrowe != address(0));
+        require(_borrower != address(0));
         borrower = _borrower;
         // 115
         lendingInterestRatePercentage = _lendingInterestRatePercentage;
@@ -80,16 +80,17 @@ contract EthicHubLending is EthicHubLendingPersistance, Ownable, Pausable {
         require(_lendingDays > 0);
         lendingDays = _lendingDays;
 
-        reputation = EthicHubReputationInterface(ethicHubStorage.getAddress(keccak256("contract.name", "reputation"));
+        reputation = EthicHubReputationInterface(ethicHubStorage.getAddress(keccak256("contract.name", "reputation")));
         require(reputation != address(0));
         state = LendingState.Uninitialized;
     }
 
-    function saveInitialParametersToStorage(uint _maxDefaultDays) external onlyOwner {
-        require(maxDefaultDays != 0);
-        ethicHubStorage.setUint(keccak256("lending.maxDefaultDays", this) _maxDefaultDays));
-        ethicHubStorage.setAddress(keccak256("lending.community",this), borrower));
-        ethicHubStorage.setAddress(keccak256("lending.localNode",this), msg.sender));
+    function saveInitialParametersToStorage(uint _maxDefaultDays, uint _tier) external onlyOwner {
+        require(_maxDefaultDays != 0);
+        ethicHubStorage.setUint(keccak256("lending.maxDefaultDays", this), _maxDefaultDays);
+        ethicHubStorage.setAddress(keccak256("lending.community",this), borrower);
+        ethicHubStorage.setAddress(keccak256("lending.localNode",this), msg.sender);
+        ethicHubStorage.setUint(keccak256("lending.tier",this), _tier);
 
         state = LendingState.AcceptingContributions;
         emit StateChange(uint(state));
