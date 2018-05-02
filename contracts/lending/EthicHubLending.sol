@@ -28,6 +28,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     address[] public investorsKeys;
 
     uint256 public lendingInterestRatePercentage;
+    uint256 public investorInterest;
     uint256 public totalLendingAmount;
     uint256 public lendingDays;
     uint256 public initialEthPerFiatRate;
@@ -81,7 +82,9 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(_borrower != address(0));
         borrower = _borrower;
         // 15 * (lending days)/ 365 + 4% local node fee + EthicHub fee
-        lendingInterestRatePercentage = _annualInterest.mul(100).mul(_lendingDays).div(365).add(localNodeFee).add(ethichubFee);
+        // lendingInterestRate with 2 decimal
+        lendingInterestRatePercentage = _annualInterest.mul(10000).mul(_lendingDays).div(365).add(localNodeFee).add(ethichubFee).add(10000);
+        investorInterest = _annualInterest.mul(10000).mul(_lendingDays).div(365).add(10000);
         require(_totalLendingAmount > 0);
         totalLendingAmount = _totalLendingAmount;
         //90 days for version 0.1
@@ -139,7 +142,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.ExchangingToFiat);
         initialEthPerFiatRate = _initialEthPerFiatRate;
         totalLendingFiatAmount = totalLendingAmount.mul(initialEthPerFiatRate);
-        borrowerReturnFiatAmount = totalLendingFiatAmount.mul(lendingInterestRatePercentage).div(100);
+        borrowerReturnFiatAmount = totalLendingFiatAmount.mul(lendingInterestRatePercentage).div(10000);
         emit onInitalRateSet(initialEthPerFiatRate);
         state = LendingState.AwaitingReturn;
         emit StateChange(uint(state));
@@ -159,16 +162,29 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
     function reclaimContributionWithInterest(address beneficiary) external {
         require(state == LendingState.ContributionReturned);
-        uint contribution = investors[beneficiary].amount.mul(initialEthPerFiatRate).mul(lendingInterestRatePercentage).div(borrowerReturnEthPerFiatRate).div(100);
+        uint contribution = investors[beneficiary].amount.mul(initialEthPerFiatRate).mul(investorInterest).div(borrowerReturnEthPerFiatRate).div(10000);
         require(contribution > 0);
         beneficiary.transfer(contribution);
+    }
+
+    function reclaimLocalNodeFee(address beneficiary) external {
+        require(state == LendingState.ContributionReturned);
+        uint fee = borrowerReturnAmount.mul(localNodeFee).div(100);
+        require(fee > 0);
+        beneficiary.transfer(fee);
+    }
+
+    function reclaimEthicHubTeamFee(address beneficiary) external {
+        require(state == LendingState.ContributionReturned);
+        uint fee = borrowerReturnAmount.mul(ethichubFee).div(100);
+        require(fee > 0);
+        beneficiary.transfer(fee);
     }
 
     function returnBorrowedEth() payable public {
         require(state == LendingState.AwaitingReturn);
         require(borrowerReturnEthPerFiatRate > 0);
         require(msg.value == borrowerReturnAmount);
-
 
 
         state = LendingState.ContributionReturned;
