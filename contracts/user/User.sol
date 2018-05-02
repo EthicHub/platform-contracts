@@ -30,7 +30,7 @@ import '../math/SafeMath.sol';
 contract User is Ownable, EthicHubBase {
 
 
-    event UserStatusChanged(address target, bool isRegistered);
+    event UserStatusChanged(address target, string profile, bool isRegistered);
 
     constructor(address _storageAddress)
         EthicHubBase(_storageAddress)
@@ -43,40 +43,42 @@ contract User is Ownable, EthicHubBase {
     /**
      * @dev Changes registration status of an address for participation.
      * @param target Address that will be registered/deregistered.
+     * @param profile profile of user.
      * @param isRegistered New registration status of address.
      */
-    function changeUserStatus(address target, bool isRegistered)
+    function changeUserStatus(address target, string profile, bool isRegistered)
         public
         onlyOwner
     {
-        ethicHubStorage.setBool(keccak256("lending.user", target), isRegistered);
-        emit UserStatusChanged(target, isRegistered);
+        ethicHubStorage.setBool(keccak256("lending.user", profile, target), isRegistered);
+        emit UserStatusChanged(target, profile, isRegistered);
     }
 
     /**
      * @dev Changes registration statuses of addresses for participation.
      * @param targets Addresses that will be registered/deregistered.
+     * @param profile profile of user.
      * @param isRegistered New registration status of addresses.
      */
-    function changeUsersStatus(address[] targets, bool isRegistered)
+    function changeUsersStatus(address[] targets, string profile, bool isRegistered)
         public
         onlyOwner
     {
         for (uint i = 0; i < targets.length; i++) {
-            changeUserStatus(targets[i], isRegistered);
+            changeUserStatus(targets[i], profile, isRegistered);
         }
     }
 
 
     /**
      * @dev View registration status of an address for participation.
-     * @return isRegistered boolean registration status of address.
+     * @return isRegistered boolean registration status of address for a specific profile.
      */
-    function viewRegistrationStatus(address target)
+    function viewRegistrationStatus(address target, string profile)
         view public
         returns(bool isRegistered)
     {
-        isRegistered = ethicHubStorage.getBool(keccak256("lending.user", target));
+        isRegistered = ethicHubStorage.getBool(keccak256("lending.user", profile, target));
     }
 }
 
