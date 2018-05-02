@@ -82,13 +82,10 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(_borrower != address(0));
         borrower = _borrower;
         // 15 * (lending days)/ 365 + 4% local node fee + EthicHub fee
-<<<<<<< HEAD
         // lendingInterestRate with 2 decimal
         lendingInterestRatePercentage = _annualInterest.mul(10000).mul(_lendingDays).div(365).add(localNodeFee).add(ethichubFee).add(10000);
         investorInterest = _annualInterest.mul(10000).mul(_lendingDays).div(365).add(10000);
-=======
-        lendingInterestRatePercentage = _annualInterest.mul(100).mul(_lendingDays).div(365).add(localNodeFee).add(ethichubFee);
->>>>>>> 8092ddc... Fixes: #10 fix lending interest rate
+
         require(_totalLendingAmount > 0);
         totalLendingAmount = _totalLendingAmount;
         //90 days for version 0.1
