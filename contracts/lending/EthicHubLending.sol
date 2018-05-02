@@ -37,6 +37,8 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     uint256 public borrowerReturnFiatAmount;
     uint256 public borrowerReturnEthPerFiatRate;
     uint256 public borrowerReturnAmount;
+    uint256 public constant ethichubFee = 3;
+    uint256 public constant localNodeFee = 4;
 
     address private reputation = EthicHubReputationInterface(0);
 
@@ -64,7 +66,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         uint _fundingStartTime,
         uint _fundingEndTime,
         address _borrower,
-        uint _lendingInterestRatePercentage,
+        uint _annualInterest,
         uint _totalLendingAmount,
         uint256 _lendingDays,
         address _storageAddress
@@ -78,8 +80,8 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         fundingEndTime = _fundingEndTime;
         require(_borrower != address(0));
         borrower = _borrower;
-        // 115
-        lendingInterestRatePercentage = _lendingInterestRatePercentage;
+        // 15 * (lending days)/ 365 + 4% local node fee + EthicHub fee
+        lendingInterestRatePercentage = _annualInterest.mul(100).mul(_lendingDays).div(365).add(localNodeFee).add(ethichubFee);
         require(_totalLendingAmount > 0);
         totalLendingAmount = _totalLendingAmount;
         //90 days for version 0.1
