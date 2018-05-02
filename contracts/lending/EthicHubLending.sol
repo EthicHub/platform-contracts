@@ -16,7 +16,8 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         ExchangingToFiat,
         AwaitingReturn,
         ProjectNotFunded,
-        ContributionReturned
+        ContributionReturned,
+        Default
     }
 
     mapping(address => Investor) public investors;
@@ -162,7 +163,6 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(msg.value == borrowerReturnAmount);
 
 
-
         state = LendingState.ContributionReturned;
         emit StateChange(uint(state));
     }
@@ -232,6 +232,21 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         borrower.transfer(totalContributed);
     }
 
+    function updateReputation() internal {
+        uint maxDefaultDays = ethicHubStorage.getUint(keccak256("lending.maxDefaultDays", this));
+        /* if (now < fundingEndTime + lendingDays days) {
+            reputation.incrementReputation();
+        } else {
+            //TODO decrement
+        } */
+    }
+
+    function getDefaultDays(uint date) public view returns(uint) {
+        if (date < fundingEndTime.add(lendingDays * 1 days)) {
+            return 0;
+        }
+        return date.sub(fundingEndTime.add(lendingDays * 1 days)).div(60).div(60).div(24);
+    }
 
 
 

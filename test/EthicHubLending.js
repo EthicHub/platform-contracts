@@ -305,6 +305,28 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
 
     });
 
+    describe('Default', async function() {
+        it('should calculate correct time difference', async function() {
+            var defaultTime = this.fundingEndTime + duration.days(this.lendingDays);
+            for (var defaultDays = 0; defaultDays <= 10; defaultDays++) {
+                var resultDays = await this.lending.getDefaultDays(defaultTime + duration.days(defaultDays));
+                resultDays.toNumber().should.be.equal(defaultDays);
+            }
+
+        });
+        it('should count half a day as full day', async function() {
+            var defaultTime = this.fundingEndTime + duration.days(this.lendingDays);
+            var resultDays = await this.lending.getDefaultDays(defaultTime + duration.days(1.5));
+            resultDays.toNumber().should.be.equal(1);
+        });
+
+        it('should be 0 days if not yet ended', async function() {
+            var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) - duration.seconds(1);
+            var resultDays = await this.lending.getDefaultDays(defaultTime);
+            resultDays.toNumber().should.be.equal(0);
+        });
+    });
+
     describe('Retrieve contribution with interest', async function() {
 
         it('Should return investors contributions with interests', async function() {
