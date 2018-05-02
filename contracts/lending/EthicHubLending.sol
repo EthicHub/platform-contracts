@@ -38,8 +38,9 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     uint256 public borrowerReturnFiatAmount;
     uint256 public borrowerReturnEthPerFiatRate;
     uint256 public borrowerReturnAmount;
+    uint256 public tier;
 
-    address private reputation = EthicHubReputationInterface(0);
+    EthicHubReputationInterface reputation = EthicHubReputationInterface(0);
 
     struct Investor {
         uint amount;
@@ -54,6 +55,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     event onInitalRateSet(uint rate);
     event onReturnRateSet(uint rate);
 
+    event Log(uint log);
 
     function EthicHubLending(
         uint _fundingStartTime,
@@ -83,23 +85,28 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
         reputation = EthicHubReputationInterface(ethicHubStorage.getAddress(keccak256("contract.name", "reputation")));
         require(reputation != address(0));
+
         state = LendingState.Uninitialized;
     }
 
-    function saveInitialParametersToStorage(uint _maxDefaultDays, uint _tier) external onlyOwner {
+    function saveInitialParametersToStorage(uint _maxDefaultDays, uint _tier, uint _communityMembers) external onlyOwner {
         require(_maxDefaultDays != 0);
+        require(state == LendingState.Uninitialized);
+        require(_tier > 0);
+        require(_communityMembers >= 20);
         ethicHubStorage.setUint(keccak256("lending.maxDefaultDays", this), _maxDefaultDays);
-        ethicHubStorage.setAddress(keccak256("lending.community",this), borrower);
-        ethicHubStorage.setAddress(keccak256("lending.localNode",this), msg.sender);
-        ethicHubStorage.setUint(keccak256("lending.tier",this), _tier);
-
+        ethicHubStorage.setAddress(keccak256("lending.community", this), borrower);
+        ethicHubStorage.setAddress(keccak256("lending.localNode", this), msg.sender);
+        ethicHubStorage.setUint(keccak256("lending.tier", this), _tier);
+        ethicHubStorage.setUint(keccak256("lending.borrowers", this), _communityMembers);
+        tier = _tier;
         state = LendingState.AcceptingContributions;
         emit StateChange(uint(state));
 
     }
 
     function() public payable whenNotPaused {
-      require(state == LendingState.AwaitingReturn || state == LendingState.AcceptingContributions);
+        require(state == LendingState.AwaitingReturn || state == LendingState.AcceptingContributions);
         if(state == LendingState.AwaitingReturn) {
             returnBorrowedEth();
         } else {
@@ -116,6 +123,14 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.AcceptingContributions);
         require(now > fundingEndTime);
         state = LendingState.ProjectNotFunded;
+        emit StateChange(uint(state));
+    }
+
+    function declareProjectDefault() external onlyOwner {
+        require(state == LendingState.AwaitingReturn);
+        require(getDefaultDays(now) >= ethicHubStorage.getUint(keccak256("lending.maxDefaultDays", this)));
+        reputation.burnReputation();
+        state = LendingState.Default;
         emit StateChange(uint(state));
     }
 
@@ -161,17 +176,10 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.AwaitingReturn);
         require(borrowerReturnEthPerFiatRate > 0);
         require(msg.value == borrowerReturnAmount);
-
-
         state = LendingState.ContributionReturned;
         emit StateChange(uint(state));
+        updateReputation();
     }
-
-    function selfKill() external onlyOwner {
-        selfdestruct(owner);
-    }
-
-
 
 
     // @notice Function to participate in contribution period
@@ -227,25 +235,30 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     function sendFundsToBorrower() internal {
       //Waiting for Exchange
         require(capReached);
+        borrower.transfer(totalContributed);
         state = LendingState.ExchangingToFiat;
         emit StateChange(uint(state));
-        borrower.transfer(totalContributed);
+
     }
 
     function updateReputation() internal {
-        uint maxDefaultDays = ethicHubStorage.getUint(keccak256("lending.maxDefaultDays", this));
-        /* if (now < fundingEndTime + lendingDays days) {
-            reputation.incrementReputation();
+        uint defaultDays = getDefaultDays(now);
+        if (defaultDays > 0) {
+            ethicHubStorage.setUint(keccak256("lending.defaultDays", this), defaultDays);
+            reputation.burnReputation();
         } else {
-            //TODO decrement
-        } */
+            uint successesByTier = ethicHubStorage.getUint(keccak256("community.completedProjectsByTier", this, tier)).add(1);
+            ethicHubStorage.setUint(keccak256("community.completedProjectsByTier", this, tier), successesByTier);
+            reputation.incrementReputation();
+        }
     }
 
     function getDefaultDays(uint date) public view returns(uint) {
         if (date < fundingEndTime.add(lendingDays * 1 days)) {
             return 0;
+        } else {
+            return date.sub(fundingEndTime.add(lendingDays * 1 days)).div(60).div(60).div(24);
         }
-        return date.sub(fundingEndTime.add(lendingDays * 1 days)).div(60).div(60).div(24);
     }
 
 

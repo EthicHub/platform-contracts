@@ -1,6 +1,6 @@
 pragma solidity ^0.4.20;
 
-interface EthicHubReputationInterface {
+contract EthicHubReputationInterface {
     function burnReputation() external;
     function incrementReputation() external;
 }
