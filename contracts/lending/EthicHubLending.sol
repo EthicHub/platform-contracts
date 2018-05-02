@@ -53,6 +53,12 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     event onInitalRateSet(uint rate);
     event onReturnRateSet(uint rate);
 
+    // modifiers
+    modifier checkProfileRegistered(string profile) {
+        bool isRegistered = ethicHubStorage.getBool(keccak256("lending.user", profile, msg.sender));
+        require(isRegistered);
+        _;
+    }
 
     function EthicHubLending(
         uint _fundingStartTime,
@@ -97,7 +103,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
     }
 
-    function() public payable whenNotPaused {
+    function() public payable checkProfileRegistered('whitelist') whenNotPaused {
       require(state == LendingState.AwaitingReturn || state == LendingState.AcceptingContributions);
         if(state == LendingState.AwaitingReturn) {
             returnBorrowedEth();
