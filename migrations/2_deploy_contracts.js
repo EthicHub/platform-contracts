@@ -6,7 +6,7 @@ const utils = web3_1_0.utils;
 
 //const Lending = artifacts.require('Lending');
 const storage = artifacts.require('./storage/EthicHubStorage.sol');
-const cmc = artifacts.require('./EthichubCMC.sol');
+const cmc = artifacts.require('./EthicHubCMC.sol');
 const reputation = artifacts.require('./reputation/EthicHubReputation.sol');
 const userManager = artifacts.require('./user/EthicHubUser.sol');
 
