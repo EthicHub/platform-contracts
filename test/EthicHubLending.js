@@ -31,12 +31,12 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
 
         this.fundingStartTime = latestTime() + duration.days(1);
         this.fundingEndTime = this.fundingStartTime + duration.days(40);
-        this.lendingInterestRatePercentage = 115;
+        this.lendingInterestRatePercentage = 110;
         this.totalLendingAmount = ether(3);
         this.tier = 1;
-        //400 pesos per eth
-        this.initialEthPerFiatRate = 400;
-        this.finalEthPerFiatRate = 500;
+        //1 pesos per eth
+        this.initialEthPerFiatRate = 1;
+        this.finalEthPerFiatRate = 1;
         this.lendingDays = 90;
         this.defaultMaxDays = 90;
         this.members = 20;
@@ -385,12 +385,12 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
 
     describe('Retrieve contribution with interest', async function() {
 
-        it('Should return investors contributions with interests', async function() {
+        it.only('Should return investors contributions with interests', async function() {
             await increaseTimeTo(this.fundingStartTime  + duration.days(1));
 
-            const investment2 = ether(0.9);
-            const investment3 = ether(1.3);
-            const investment4 = ether(0.8);
+            const investment2 = ether(1);
+            const investment3 = ether(0.5);
+            const investment4 = ether(1.5);
 
             const investor2InitialBalance = await web3.eth.getBalance(investor2);
             const investor3InitialBalance = await web3.eth.getBalance(investor3);
@@ -409,8 +409,6 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await this.lending.reclaimContributionWithInterest(investor4);
 
             const balance = await web3.eth.getBalance(this.lending.address);
-            console.log("Remaining balance:");
-            console.log(balance);
             balance.toNumber().should.be.equal(0);
 
             console.log("---> Investor 2");
@@ -450,13 +448,12 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
     }
 
     function checkInvestmentResults(investorInitialBalance, expected, actual) {
-        //console.log("Initial balance:");
-        // console.log(utils.fromWei(investorInitialBalance, 'ether').toNumber());
-        // console.log("Expected balance:");
-        // console.log(utils.fromWei(expected, 'ether').toNumber());
-        // console.log("Actual balance:");
-        // console.log(utils.fromWei(actual, 'ether').toNumber());
-        //TODO: more exact calculation
+        console.log("Initial balance:");
+        console.log(utils.fromWei(utils.toBN(investorInitialBalance), 'ether'));
+        console.log("Final balance:");
+        console.log(utils.fromWei(utils.toBN(actual), 'ether'));
+        console.log("Expected balance:");
+        console.log(utils.fromWei(utils.toBN(expected), 'ether'));
         investorInitialBalance.should.be.bignumber.below(actual);
     }
 
