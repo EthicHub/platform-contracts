@@ -69,7 +69,7 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
         //Tier
         uint projectTier = ethicHubStorage.getUint(keccak256("lending.tier", lendingContract));
         require(projectTier > 0);
-        uint succesfulProjectsInTier = ethicHubStorage.getUint(keccak256("community.completedProjects.tier", projectTier));
+        uint succesfulProjectsInTier = ethicHubStorage.getUint(keccak256("community.completedProjectsByTier",lendingContract, projectTier));
         require(succesfulProjectsInTier > 1);
 
         //***** Community

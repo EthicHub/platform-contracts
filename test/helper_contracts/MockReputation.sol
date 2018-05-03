@@ -4,13 +4,14 @@ import "../../contracts/reputation/EthicHubReputationInterface.sol";
 
 
 contract MockReputation is EthicHubReputationInterface {
-    string foo;
+    bool public burnCalled = false;
+    bool public incrementCalled = false;
 
     function burnReputation() external {
-        foo = "bar";
+        burnCalled = true;
     }
 
     function incrementReputation() external {
-        foo = "bar";
+        incrementCalled = true;
     }
 }

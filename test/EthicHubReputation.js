@@ -266,7 +266,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             const projectTier = new BigNumber(1);
             const previouslyCompletedProjects = new BigNumber(3);
             await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
-            await this.mockStorage.setUint(utils.soliditySha3("community.completedProjects.tier", projectTier), previouslyCompletedProjects);
+            await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
             await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
 
@@ -296,7 +296,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             const projectTier = new BigNumber(1);
             const previouslyCompletedProjects = new BigNumber(3);
             await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
-            await this.mockStorage.setUint(utils.soliditySha3("community.completedProjects.tier", projectTier), previouslyCompletedProjects);
+            await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
             await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
 
@@ -314,7 +314,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             const projectTier = new BigNumber(1);
             const previouslyCompletedProjects = new BigNumber(3);
             await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
-            await this.mockStorage.setUint(utils.soliditySha3("community.completedProjects.tier", projectTier), previouslyCompletedProjects);
+            await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
             await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
 
@@ -332,7 +332,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             const projectTier = new BigNumber(1);
             const previouslyCompletedProjects = new BigNumber(3);
             //await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
-            await this.mockStorage.setUint(utils.soliditySha3("community.completedProjects.tier", projectTier), previouslyCompletedProjects);
+            await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
             await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
 
@@ -350,7 +350,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             const projectTier = new BigNumber(1);
             const previouslyCompletedProjects = new BigNumber(3);
             await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
-            //await this.mockStorage.setUint(utils.soliditySha3("community.completedProjects.tier", projectTier), previouslyCompletedProjects);
+            //await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
             await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
 
