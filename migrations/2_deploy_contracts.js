@@ -1,4 +1,14 @@
-const Lending = artifacts.require('Lending');
+const web3_1_0 = require('web3');
+const BigNumber = web3.BigNumber
+const utils = web3_1_0.utils;
+
+
+
+//const Lending = artifacts.require('Lending');
+const storage = artifacts.require('./storage/EthicHubStorage.sol');
+const cmc = artifacts.require('./EthichubCMC.sol');
+const reputation = artifacts.require('./reputation/EthicHubReputation.sol');
+
 
 function latestTime() {
   return web3.eth.getBlock(web3.eth.blockNumber).timestamp;
@@ -21,7 +31,8 @@ function now() {
 }
 
 
-module.exports = function(deployer) {
+module.exports = async (deployer, network) => {
+    /*
     //01/10/2018
     fundingStartTime = now() + duration.minutes(1);
     //01/20/2018
@@ -34,4 +45,22 @@ module.exports = function(deployer) {
     lendingDays = 90;
 
     deployer.deploy(Lending, fundingStartTime, fundingEndTime, web3.eth.accounts[1], lendingInterestRatePercentage, totalLendingAmount, lendingDays)
+    */
+
+    //deploy lending with storage
+    return deployer.deploy(storage).then(() => {
+        return deployer.deploy(cmc, storage.address).then(() => {
+            return storage.deployed().then(async storageInstance => {
+                // using storage owner to add cmc in ethichub contract network
+                await storageInstance.setAddress(utils.soliditySha3("contract.address", cmc.address), cmc.address)
+                console.log(await storageInstance.getAddress(utils.soliditySha3("contract.address", web3.eth.accounts[0])))
+                return deployer.deploy(reputation, storage.address).then(() => {
+                   return cmc.deployed().then(async cmcInstance => {
+                        cmcInstance.upgradeContract(reputation.address,"reputation");
+                    })
+                })
+            })
+        })
+    })
+
 };

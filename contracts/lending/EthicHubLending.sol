@@ -1,19 +1,23 @@
-pragma solidity ^0.4.18;
-
-import "./math/SafeMath.sol";
-import "./lifecycle/Pausable.sol";
-import "./ownership/Ownable.sol";
+pragma solidity ^0.4.23;
 
 
-contract Lending is Ownable, Pausable {
+import "../math/SafeMath.sol";
+import "../lifecycle/Pausable.sol";
+import "../ownership/Ownable.sol";
+import "../reputation/EthicHubReputationInterface.sol";
+import "../EthicHubBase.sol";
+
+contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     using SafeMath for uint256;
     uint256 public minContribAmount = 0.1 ether;                          // 0.01 ether
     enum LendingState {
+        Uninitialized,
         AcceptingContributions,
         ExchangingToFiat,
         AwaitingReturn,
         ProjectNotFunded,
-        ContributionReturned
+        ContributionReturned,
+        Default
     }
 
     mapping(address => Investor) public investors;
@@ -34,6 +38,9 @@ contract Lending is Ownable, Pausable {
     uint256 public borrowerReturnFiatAmount;
     uint256 public borrowerReturnEthPerFiatRate;
     uint256 public borrowerReturnAmount;
+    uint256 public tier;
+
+    EthicHubReputationInterface reputation = EthicHubReputationInterface(0);
 
     struct Investor {
         uint amount;
@@ -49,21 +56,56 @@ contract Lending is Ownable, Pausable {
     event onReturnRateSet(uint rate);
 
 
-    function Lending(uint _fundingStartTime, uint _fundingEndTime, address _borrower, uint _lendingInterestRatePercentage, uint _totalLendingAmount, uint256 _lendingDays) public {
+    function EthicHubLending(
+        uint _fundingStartTime,
+        uint _fundingEndTime,
+        address _borrower,
+        uint _lendingInterestRatePercentage,
+        uint _totalLendingAmount,
+        uint256 _lendingDays,
+        address _storageAddress
+        )
+        EthicHubBase(_storageAddress)
+        public {
+
+        version = 1;
         fundingStartTime = _fundingStartTime;
+        require(_fundingEndTime > fundingStartTime);
         fundingEndTime = _fundingEndTime;
+        require(_borrower != address(0));
         borrower = _borrower;
         // 115
         lendingInterestRatePercentage = _lendingInterestRatePercentage;
+        require(_totalLendingAmount > 0);
         totalLendingAmount = _totalLendingAmount;
         //90 days for version 0.1
+        require(_lendingDays > 0);
         lendingDays = _lendingDays;
+
+        reputation = EthicHubReputationInterface(ethicHubStorage.getAddress(keccak256("contract.name", "reputation")));
+        require(reputation != address(0));
+
+        state = LendingState.Uninitialized;
+    }
+
+    function saveInitialParametersToStorage(uint _maxDefaultDays, uint _tier, uint _communityMembers) external onlyOwner {
+        require(_maxDefaultDays != 0);
+        require(state == LendingState.Uninitialized);
+        require(_tier > 0);
+        require(_communityMembers >= 20);
+        ethicHubStorage.setUint(keccak256("lending.maxDefaultDays", this), _maxDefaultDays);
+        ethicHubStorage.setAddress(keccak256("lending.community", this), borrower);
+        ethicHubStorage.setAddress(keccak256("lending.localNode", this), msg.sender);
+        ethicHubStorage.setUint(keccak256("lending.tier", this), _tier);
+        ethicHubStorage.setUint(keccak256("lending.borrowers", this), _communityMembers);
+        tier = _tier;
         state = LendingState.AcceptingContributions;
         emit StateChange(uint(state));
+
     }
 
     function() public payable whenNotPaused {
-      require(state == LendingState.AwaitingReturn || state == LendingState.AcceptingContributions);
+        require(state == LendingState.AwaitingReturn || state == LendingState.AcceptingContributions);
         if(state == LendingState.AwaitingReturn) {
             returnBorrowedEth();
         } else {
@@ -83,7 +125,15 @@ contract Lending is Ownable, Pausable {
         emit StateChange(uint(state));
     }
 
-
+    function declareProjectDefault() external onlyOwner {
+        require(state == LendingState.AwaitingReturn);
+        uint maxDefaultDays = ethicHubStorage.getUint(keccak256("lending.maxDefaultDays", this));
+        require(getDefaultDays(now) >= maxDefaultDays);
+        ethicHubStorage.setUint(keccak256("lending.defaultDays", this), maxDefaultDays);
+        reputation.burnReputation();
+        state = LendingState.Default;
+        emit StateChange(uint(state));
+    }
 
     function setBorrowerReturnEthPerFiatRate(uint256 _borrowerReturnEthPerFiatRate) external onlyOwner {
         require(state == LendingState.AwaitingReturn);
@@ -129,13 +179,8 @@ contract Lending is Ownable, Pausable {
         require(msg.value == borrowerReturnAmount);
         state = LendingState.ContributionReturned;
         emit StateChange(uint(state));
+        updateReputation();
     }
-
-    function selfKill() external onlyOwner {
-        selfdestruct(owner);
-    }
-
-
 
 
     // @notice Function to participate in contribution period
@@ -191,10 +236,34 @@ contract Lending is Ownable, Pausable {
     function sendFundsToBorrower() internal {
       //Waiting for Exchange
         require(capReached);
+        borrower.transfer(totalContributed);
         state = LendingState.ExchangingToFiat;
         emit StateChange(uint(state));
-        borrower.transfer(totalContributed);
+
     }
+
+    function updateReputation() internal {
+        uint defaultDays = getDefaultDays(now);
+        if (defaultDays > 0) {
+            ethicHubStorage.setUint(keccak256("lending.defaultDays", this), defaultDays);
+            reputation.burnReputation();
+        } else {
+            uint successesByTier = ethicHubStorage.getUint(keccak256("community.completedProjectsByTier", this, tier)).add(1);
+            ethicHubStorage.setUint(keccak256("community.completedProjectsByTier", this, tier), successesByTier);
+            reputation.incrementReputation();
+        }
+    }
+
+    function getDefaultDays(uint date) public view returns(uint) {
+        uint lendingDaysSeconds = lendingDays * 1 days;
+        uint defaultTime = fundingEndTime.add(lendingDaysSeconds);
+        if (date < defaultTime) {
+            return 0;
+        } else {
+            return date.sub(defaultTime).div(60).div(60).div(24);
+        }
+    }
+
 
 
 }
