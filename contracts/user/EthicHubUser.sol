@@ -22,12 +22,11 @@ pragma solidity ^0.4.23;
 
 import '../ownership/Ownable.sol';
 import '../EthicHubBase.sol';
-import '../math/SafeMath.sol';
 
 /* @title User
-@dev This is an extension to add user 
+@dev This is an extension to add user
 */
-contract User is Ownable, EthicHubBase {
+contract EthicHubUser is Ownable, EthicHubBase {
 
 
     event UserStatusChanged(address target, string profile, bool isRegistered);
@@ -50,7 +49,7 @@ contract User is Ownable, EthicHubBase {
         public
         onlyOwner
     {
-        ethicHubStorage.setBool(keccak256("lending.user", profile, target), isRegistered);
+        ethicHubStorage.setBool(keccak256("user", profile, target), isRegistered);
         emit UserStatusChanged(target, profile, isRegistered);
     }
 
@@ -78,7 +77,6 @@ contract User is Ownable, EthicHubBase {
         view public
         returns(bool isRegistered)
     {
-        isRegistered = ethicHubStorage.getBool(keccak256("lending.user", profile, target));
+        isRegistered = ethicHubStorage.getBool(keccak256("user", profile, target));
     }
 }
-
