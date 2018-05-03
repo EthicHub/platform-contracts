@@ -88,6 +88,17 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         state = LendingState.Uninitialized;
     }
 
+    function() public payable whenNotPaused {
+        require(state == LendingState.AwaitingReturn || state == LendingState.AcceptingContributions || state == LendingState.ExchangingToFiat);
+        if (state == LendingState.AwaitingReturn) {
+            returnBorrowedEth();
+        } else if (state == LendingState.ExchangingToFiat) {
+            returnExcessEth(ms);
+        } else if (state == LendingState.AcceptingContributions) {
+            contributeWithAddress(msg.sender);
+        }
+    }
+
     function saveInitialParametersToStorage(uint _maxDefaultDays, uint _tier, uint _communityMembers) external onlyOwner {
         require(_maxDefaultDays != 0);
         require(state == LendingState.Uninitialized);
@@ -103,15 +114,6 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         state = LendingState.AcceptingContributions;
         emit StateChange(uint(state));
 
-    }
-
-    function() public payable whenNotPaused {
-        require(state == LendingState.AwaitingReturn || state == LendingState.AcceptingContributions);
-        if(state == LendingState.AwaitingReturn) {
-            returnBorrowedEth();
-        } else {
-            contributeWithAddress(msg.sender);
-        }
     }
 
     /**
@@ -181,6 +183,17 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         state = LendingState.ContributionReturned;
         emit StateChange(uint(state));
         updateReputation();
+    }
+
+    function returnExcessEth() payable public {
+        require(state == LendingState.ExchangingToFiat);
+        require(initialEthPerFiatRate == 0);
+        require(msg.value < totalLendingAmount)
+
+        //TODO
+        change new totalLendingAmount
+        create new vault?
+
     }
 
 
