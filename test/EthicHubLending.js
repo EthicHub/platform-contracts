@@ -364,28 +364,22 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             resultDays.toNumber().should.be.equal(0);
         });
 
-        it.only('should allow declare project as default if no money returned after maxDefaultDays', async function() {
+        it('should allow declare project as default if no money returned after maxDefaultDays', async function() {
             await increaseTimeTo(this.fundingEndTime  - duration.minutes(1))
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-
-            const defaultTime = this.fundingEndTime  + duration.days(this.lendingDays) + duration.days(this.maxDefaultDays);
-            await increaseTimeTo(defaultTime);
-            console.log("declareProjectDefault");
-            console.log(await this.lending.getDefaultDays(defaultTime));
+            const defaultTime = this.fundingEndTime  + duration.days(this.lendingDays) + duration.days(this.defaultMaxDays);
+            increaseTimeTo(defaultTime);
             var tx = await this.lending.declareProjectDefault().should.be.fulfilled;
-            console.log(tx);
             var calledBurn = await this.mockReputation.burnCalled();
             calledBurn.should.be.equal(true);
-            console.log("sdsdsd");
-
             var defaultDays = await this.mockStorage.getUint(utils.soliditySha3("lending.defaultDays", this.lending.address));
-            defaultDays.toNumber().should.be.equal(this.maxDefaultDays);
+            defaultDays.toNumber().should.be.equal(this.defaultMaxDays);
             var state = await this.lending.state();
             state.toNumber().should.be.equal(Default);
         });
 
-        it.only('should not allow to declare project as default before lending period ends', async function() {
+        it('should not allow to declare project as default before lending period ends', async function() {
             await increaseTimeTo(this.fundingEndTime  - duration.minutes(1))
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;

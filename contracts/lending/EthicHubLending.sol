@@ -55,7 +55,6 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     event onInitalRateSet(uint rate);
     event onReturnRateSet(uint rate);
 
-    event Log(uint log);
 
     function EthicHubLending(
         uint _fundingStartTime,
@@ -129,9 +128,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     function declareProjectDefault() external onlyOwner {
         require(state == LendingState.AwaitingReturn);
         uint maxDefaultDays = ethicHubStorage.getUint(keccak256("lending.maxDefaultDays", this));
-        Log(maxDefaultDays);
-        Log(getDefaultDays(now));
-        //require(getDefaultDays(now) >= maxDefaultDays);
+        require(getDefaultDays(now) >= maxDefaultDays);
         ethicHubStorage.setUint(keccak256("lending.defaultDays", this), maxDefaultDays);
         reputation.burnReputation();
         state = LendingState.Default;
