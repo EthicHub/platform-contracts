@@ -54,6 +54,13 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
                                                 this.lendingDays,
                                                 this.mockStorage.address
                                             );
+        await this.mockStorage.setBool(utils.soliditySha3("user", "localNode",owner),true);
+        await this.mockStorage.setBool(utils.soliditySha3("user", "investor",investor),true);
+        await this.mockStorage.setBool(utils.soliditySha3("user", "investor",investor2),true);
+        await this.mockStorage.setBool(utils.soliditySha3("user", "investor",investor3),true);
+        await this.mockStorage.setBool(utils.soliditySha3("user", "investor",investor4),true);
+        await this.mockStorage.setBool(utils.soliditySha3("user", "investor",investor5),true);
+
         await this.lending.saveInitialParametersToStorage(this.defaultMaxDays, this.tier, this.members);
     });
 

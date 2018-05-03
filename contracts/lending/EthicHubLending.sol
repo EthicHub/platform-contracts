@@ -93,6 +93,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.Uninitialized);
         require(_tier > 0);
         require(_communityMembers >= 20);
+        require(ethicHubStorage.getBool(keccak256("user", "localNode", msg.sender)));
         ethicHubStorage.setUint(keccak256("lending.maxDefaultDays", this), _maxDefaultDays);
         ethicHubStorage.setAddress(keccak256("lending.community", this), borrower);
         ethicHubStorage.setAddress(keccak256("lending.localNode", this), msg.sender);
@@ -192,6 +193,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.AcceptingContributions);
         require(msg.value >= minContribAmount);
         require(isContribPeriodRunning());
+        require(ethicHubStorage.getBool(keccak256("user", "investor", msg.sender)));
 
         uint contribValue = msg.value;
         uint excessContribValue = 0;
