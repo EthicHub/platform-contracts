@@ -55,8 +55,6 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     event onInitalRateSet(uint rate);
     event onReturnRateSet(uint rate);
 
-    event Log(uint log);
-
     function EthicHubLending(
         uint _fundingStartTime,
         uint _fundingEndTime,
@@ -254,10 +252,12 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     }
 
     function getDefaultDays(uint date) public view returns(uint) {
-        if (date < fundingEndTime.add(lendingDays * 1 days)) {
+        uint lendingDaysSeconds = lendingDays * 1 days;
+        uint defaultTime = fundingEndTime.add(lendingDaysSeconds);
+        if (date < defaultTime) {
             return 0;
         } else {
-            return date.sub(fundingEndTime.add(lendingDays * 1 days)).div(60).div(60).div(24);
+            return date.sub(defaultTime).div(60).div(60).div(24);
         }
     }
 

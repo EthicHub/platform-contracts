@@ -307,22 +307,23 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
         });
 
         it('should decrease reputation in default', async function() {
-            await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+            await increaseTimeTo(this.fundingEndTime - duration.minutes(1));
+
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
             await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
             const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
 
             //This should be the edge case : end of funding time + awaiting for return period.
-            var defaultTime = this.fundingEndTime + duration.days(this.lendingDays);
-
+            var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) + duration.days(1);
             await increaseTimeTo(defaultTime);//+ duration.days(1) + duration.minutes(2));//+ duration.seconds(1))
             await this.lending.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
-            console.log(await this.lending.getDefaultDays(defaultTime));
 
             var calledBurn = await this.mockReputation.burnCalled();
             calledBurn.should.be.equal(true);
-            calledBurn.should.be.equal("FIXME: Calls burn, but should be with 1 day, not 39 days");
+            var defaultDays = await this.mockStorage.getUint(utils.soliditySha3("lending.defaultDays", this.lending.address));
+            defaultDays.toNumber().should.be.equal(1);
+
 
         });
 
@@ -438,19 +439,6 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
 
     })
 
-    describe('selfKill', function() {
-        it('selfKill', async function () {
-            await increaseTimeTo(this.fundingStartTime  + duration.days(1))
-            await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.fulfilled;
-            await this.lending.sendTransaction({value:ether(1), from: investor2}).should.be.fulfilled;
-            var balance = web3.eth.getBalance(owner);
-            await this.lending.selfKill({from:investor}).should.be.rejectedWith(EVMRevert);
-            await this.lending.selfKill({from:owner}).should.be.fulfilled;
-            // 0.1 eth less due to used gas
-            new BigNumber(web3.eth.getBalance(owner)).should.be.bignumber.above(new BigNumber(balance).add(ether(1.9)));
-
-        });
-    });
 
     function getExpectedInvestorBalance(initialAmount,contribution,testEnv) {
 
