@@ -8,59 +8,46 @@ const utils = web3_1_0.utils;
 const storage = artifacts.require('./storage/EthicHubStorage.sol');
 const cmc = artifacts.require('./EthichubCMC.sol');
 const reputation = artifacts.require('./reputation/EthicHubReputation.sol');
+const userManager = artifacts.require('./user/EthicHubUser.sol');
 
-
-function latestTime() {
-  return web3.eth.getBlock(web3.eth.blockNumber).timestamp;
-}
-const duration = {
-  seconds: function (val) { return val },
-  minutes: function (val) { return val * this.seconds(60) },
-  hours: function (val) { return val * this.minutes(60) },
-  days: function (val) { return val * this.hours(24) },
-  weeks: function (val) { return val * this.days(7) },
-  years: function (val) { return val * this.days(365) }
-};
-
-function ether(n) {
-  return new web3.BigNumber(web3.toWei(n, 'ether'))
-}
-
-function now() {
-  return Math.round((new Date()).getTime() / 1000);
-}
-
-
+// Deploy EthicHub network
 module.exports = async (deployer, network) => {
-    /*
-    //01/10/2018
-    fundingStartTime = now() + duration.minutes(1);
-    //01/20/2018
-    fundingEndTime = fundingStartTime + duration.days(1);
-    lendingInterestRatePercentage = 115;
-    // 3 eths
-    totalLendingAmount = 3000000000000000000;
-    //400 pesos per eth
-    initialEthPerFiatRate = 400;
-    lendingDays = 90;
-
-    deployer.deploy(Lending, fundingStartTime, fundingEndTime, web3.eth.accounts[1], lendingInterestRatePercentage, totalLendingAmount, lendingDays)
-    */
-
-    //deploy lending with storage
+    console.log("--> Deploying EthicHubStorage...");
     return deployer.deploy(storage).then(() => {
+        //Contract management
+        console.log("--> EthicHubStorage deployed");
+        console.log("--> Deploying EthichubCMC...");
         return deployer.deploy(cmc, storage.address).then(() => {
+            console.log("--> EthichubCMC deployed");
             return storage.deployed().then(async storageInstance => {
-                // using storage owner to add cmc in ethichub contract network
-                await storageInstance.setAddress(utils.soliditySha3("contract.address", cmc.address), cmc.address)
-                console.log(await storageInstance.getAddress(utils.soliditySha3("contract.address", web3.eth.accounts[0])))
+                //Give CMC access to storage
+                console.log("--> Registering EthichubCMC in the network...");
+                await storageInstance.setAddress(utils.soliditySha3("contract.address", cmc.address), cmc.address);
+                console.log("--> EthichubCMC registered");
+                //Deploy reputation
+                console.log("--> Deploying EthicHubReputation...");
                 return deployer.deploy(reputation, storage.address).then(() => {
-                   return cmc.deployed().then(async cmcInstance => {
-                        cmcInstance.upgradeContract(reputation.address,"reputation");
-                    })
-                })
-            })
-        })
-    })
+                    console.log("--> EthicHubReputation deployed");
+                    //Set deployed reputation's role in the network
+                    return cmc.deployed().then(async cmcInstance => {
+                        console.log("--> Registering EthicHubReputation in the network...");
+                        await cmcInstance.upgradeContract(reputation.address,"reputation");
+                        console.log("--> EthicHubReputation registered");
+                        console.log("--> Deploying EthicHubUser...");
+                        return deployer.deploy(userManager,storage.address).then(() => {
+                            console.log("--> EthicHubUser deployed");
+                            console.log("--> Registering EthicHubReputation in the network...");
+                            return cmc.deployed().then(async cmcInstance => {
+                                await cmcInstance.upgradeContract(userManager.address,"users");
+                                console.log("--> EthicHubReputation registered");
+
+                                console.log("--> EthicHub network ready");
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
 
 };
