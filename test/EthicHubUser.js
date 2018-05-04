@@ -20,7 +20,7 @@
 */
 
 'use strict';
-import ether from './helpers/ether' 
+import ether from './helpers/ether'
 import {advanceBlock} from './helpers/advanceToBlock'
 import {increaseTimeTo, duration} from './helpers/increaseTime'
 import latestTime from './helpers/latestTime'
@@ -34,7 +34,7 @@ const should = require('chai')
   .use(require('chai-bignumber')(BigNumber))
   .should()
 
-const User = artifacts.require('User');
+const User = artifacts.require('EthicHubUser');
 const Storage = artifacts.require('EthicHubStorage');
 const EthicHubCMC = artifacts.require('EthicHubCMC');
 
@@ -43,7 +43,7 @@ contract('User', function (whitelisted_accounts) {
     const owner = whitelisted_accounts.pop();
     const test_account = whitelisted_accounts.pop();
 
-    
+
     describe('whitelisted accounts', function() {
       var account = 0;
       var is_registered = false;
@@ -52,7 +52,7 @@ contract('User', function (whitelisted_accounts) {
       await advanceBlock();
       this.profile = 'whitelist';
       this.storage = await Storage.new();
-      this.cmc = await EthicHubCMC.new(this.storage.address) 
+      this.cmc = await EthicHubCMC.new(this.storage.address)
       this.start = latestTime() + duration.minutes(2); // +2 minute so it starts after contract instantiation
       this.end = this.start + duration.days(40);
       await this.storage.setAddress(utils.soliditySha3("contract.address", this.cmc.address), this.cmc.address)
