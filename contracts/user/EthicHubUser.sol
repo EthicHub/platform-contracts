@@ -60,7 +60,7 @@ contract EthicHubUser is Ownable, EthicHubBase {
      * @param isRegistered New registration status of addresses.
      */
     function changeUsersStatus(address[] targets, string profile, bool isRegistered)
-        public
+        external
         onlyOwner
     {
         for (uint i = 0; i < targets.length; i++) {
