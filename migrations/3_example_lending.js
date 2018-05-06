@@ -55,7 +55,9 @@ module.exports = async (deployer, network, accounts) => {
         115,//_lendingInterestRatePercentage
         ether(3),//_totalLendingAmount
         2,//_lendingDays
-        storageInstance.address //_storageAddress
+        storageInstance.address, //_storageAddress
+        accounts[3],//localNode 
+        accounts[4]//team 
     ).then(() => {
         return lending.deployed().then(async (lendingInstance) => {
             //Gives set permissions on storage
