@@ -45,7 +45,8 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     // this guarantee we can have a 2 decimal presicion in our calculation
     uint256 public constant interestBaseUint = 100;
     uint256 public constant interestBasePercent = 10000; 
-
+    bool public localNodeFeeReclaimed; 
+    bool public ethicHubTeamFeeReclaimed;
     EthicHubReputationInterface reputation = EthicHubReputationInterface(0);
 
     struct Investor {
@@ -194,15 +195,19 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
     function reclaimLocalNodeFee() external {
         require(state == LendingState.ContributionReturned);
+        require(localNodeFeeReclaimed == false);
         uint256 fee = borrowerReturnAmount().mul(localNodeFee).mul(interestBaseUint).div(lendingInterestRatePercentage());
         require(fee > 0);
+        localNodeFeeReclaimed = true;
         localNode.transfer(fee);
     }
 
     function reclaimEthicHubTeamFee() external {
         require(state == LendingState.ContributionReturned);
+        require(ethicHubTeamFeeReclaimed == false);
         uint256 fee = borrowerReturnAmount().mul(ethichubFee).mul(interestBaseUint).div(lendingInterestRatePercentage());
         require(fee > 0);
+        ethicHubTeamFeeReclaimed = true;
         ethicHubTeam.transfer(fee);
     }
 
