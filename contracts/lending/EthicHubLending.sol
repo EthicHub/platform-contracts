@@ -28,18 +28,25 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     LendingState public state;
     address[] public investorsKeys;
 
-    uint256 public lendingInterestRatePercentage;
+    uint256 public annualInterest;
     uint256 public totalLendingAmount;
     uint256 public lendingDays;
     uint256 public initialEthPerFiatRate;
     uint256 public totalLendingFiatAmount;
     address public borrower;
+    address public localNode;
+    address public ethicHubTeam;
     uint256 public borrowerReturnDate;
-    uint256 public borrowerReturnFiatAmount;
     uint256 public borrowerReturnEthPerFiatRate;
-    uint256 public borrowerReturnAmount;
+    uint256 public constant ethichubFee = 3;
+    uint256 public constant localNodeFee = 4;
     uint256 public tier;
-
+    // interest rate is using base uint 100 and 100% 10000, this means 1% is 100
+    // this guarantee we can have a 2 decimal presicion in our calculation
+    uint256 public constant interestBaseUint = 100;
+    uint256 public constant interestBasePercent = 10000; 
+    bool public localNodeFeeReclaimed; 
+    bool public ethicHubTeamFeeReclaimed;
     EthicHubReputationInterface reputation = EthicHubReputationInterface(0);
 
     struct Investor {
@@ -55,15 +62,23 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     event onInitalRateSet(uint rate);
     event onReturnRateSet(uint rate);
 
+    // modifiers
+    modifier checkProfileRegistered(string profile) {
+        bool isRegistered = ethicHubStorage.getBool(keccak256("user", profile, msg.sender));
+        require(isRegistered);
+        _;
+    }
 
     function EthicHubLending(
         uint _fundingStartTime,
         uint _fundingEndTime,
         address _borrower,
-        uint _lendingInterestRatePercentage,
+        uint _annualInterest,
         uint _totalLendingAmount,
         uint256 _lendingDays,
-        address _storageAddress
+        address _storageAddress,
+        address _localNode,
+        address _ethicHubTeam
         )
         EthicHubBase(_storageAddress)
         public {
@@ -73,9 +88,15 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(_fundingEndTime > fundingStartTime);
         fundingEndTime = _fundingEndTime;
         require(_borrower != address(0));
+        require(_localNode != address(0));
+        require(_ethicHubTeam != address(0));
+        localNode = _localNode;
+        ethicHubTeam = _ethicHubTeam;
+
         borrower = _borrower;
-        // 115
-        lendingInterestRatePercentage = _lendingInterestRatePercentage;
+        // 15 * (lending days)/ 365 + 4% local node fee + EthicHub fee
+        annualInterest = _annualInterest;
+        
         require(_totalLendingAmount > 0);
         totalLendingAmount = _totalLendingAmount;
         //90 days for version 0.1
@@ -139,7 +160,6 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     function setBorrowerReturnEthPerFiatRate(uint256 _borrowerReturnEthPerFiatRate) external onlyOwner {
         require(state == LendingState.AwaitingReturn);
         borrowerReturnEthPerFiatRate = _borrowerReturnEthPerFiatRate;
-        borrowerReturnAmount = borrowerReturnFiatAmount.div(borrowerReturnEthPerFiatRate);
         emit onReturnRateSet(borrowerReturnEthPerFiatRate);
 
     }
@@ -149,7 +169,6 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.ExchangingToFiat);
         initialEthPerFiatRate = _initialEthPerFiatRate;
         totalLendingFiatAmount = totalLendingAmount.mul(initialEthPerFiatRate);
-        borrowerReturnFiatAmount = totalLendingFiatAmount.mul(lendingInterestRatePercentage).div(100);
         emit onInitalRateSet(initialEthPerFiatRate);
         state = LendingState.AwaitingReturn;
         emit StateChange(uint(state));
@@ -169,15 +188,33 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
     function reclaimContributionWithInterest(address beneficiary) external {
         require(state == LendingState.ContributionReturned);
-        uint contribution = investors[beneficiary].amount.mul(initialEthPerFiatRate).mul(lendingInterestRatePercentage).div(borrowerReturnEthPerFiatRate).div(100);
+        uint contribution = investors[beneficiary].amount.mul(initialEthPerFiatRate).mul(investorInterest()).div(borrowerReturnEthPerFiatRate).div(interestBaseUint);
         require(contribution > 0);
         beneficiary.transfer(contribution);
+    }
+
+    function reclaimLocalNodeFee() external {
+        require(state == LendingState.ContributionReturned);
+        require(localNodeFeeReclaimed == false);
+        uint256 fee = borrowerReturnAmount().mul(localNodeFee).mul(interestBaseUint).div(lendingInterestRatePercentage());
+        require(fee > 0);
+        localNodeFeeReclaimed = true;
+        localNode.transfer(fee);
+    }
+
+    function reclaimEthicHubTeamFee() external {
+        require(state == LendingState.ContributionReturned);
+        require(ethicHubTeamFeeReclaimed == false);
+        uint256 fee = borrowerReturnAmount().mul(ethichubFee).mul(interestBaseUint).div(lendingInterestRatePercentage());
+        require(fee > 0);
+        ethicHubTeamFeeReclaimed = true;
+        ethicHubTeam.transfer(fee);
     }
 
     function returnBorrowedEth() payable public {
         require(state == LendingState.AwaitingReturn);
         require(borrowerReturnEthPerFiatRate > 0);
-        require(msg.value == borrowerReturnAmount);
+        require(msg.value == borrowerReturnAmount());
         state = LendingState.ContributionReturned;
         emit StateChange(uint(state));
         updateReputation();
@@ -189,11 +226,10 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     //  If cap is reached, end time should be modified
     //  Funds should be transferred into multisig wallet
     // @param contributor Address
-    function contributeWithAddress(address contributor) public payable whenNotPaused {
+    function contributeWithAddress(address contributor) public payable checkProfileRegistered('investor') whenNotPaused {
         require(state == LendingState.AcceptingContributions);
         require(msg.value >= minContribAmount);
         require(isContribPeriodRunning());
-        require(ethicHubStorage.getBool(keccak256("user", "investor", msg.sender)));
 
         uint contribValue = msg.value;
         uint excessContribValue = 0;
@@ -266,6 +302,25 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         }
     }
 
+    // lendingInterestRate with 2 decimal
+    function lendingInterestRatePercentage() public view returns(uint256){
+        return annualInterest.mul(interestBaseUint).mul(lendingDays.add(getDefaultDays(now))).div(365).add(localNodeFee.mul(interestBaseUint)).add(ethichubFee.mul(interestBaseUint)).add(interestBasePercent);
+    }
+
+    // lendingInterestRate with 2 decimal
+    function investorInterest() public view returns(uint256){
+        return annualInterest.mul(interestBaseUint).mul(lendingDays.add(getDefaultDays(now))).div(365).add(interestBasePercent);
+    }
+
+    // lendingInterestRate with 2 decimal
+    function borrowerReturnFiatAmount() public view returns(uint256){
+        return totalLendingFiatAmount.mul(lendingInterestRatePercentage()).div(interestBaseUint);
+    }
+
+    // lendingInterestRate with 2 decimal
+    function borrowerReturnAmount() public view returns(uint256){
+        return borrowerReturnFiatAmount().div(borrowerReturnEthPerFiatRate);
+    }
 
 
 }
