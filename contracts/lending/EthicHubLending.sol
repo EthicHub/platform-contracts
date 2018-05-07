@@ -50,14 +50,14 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     EthicHubReputationInterface reputation = EthicHubReputationInterface(0);
 
     struct Investor {
-        uint amount;
+        uint256 amount;
         bool isCompensated;
     }
 
     // events
     event onCapReached(uint endTime);
-    event onContribution(uint totalContributed, address indexed investor, uint amount, uint investorsCount);
-    event onCompensated(address indexed contributor, uint amount);
+    event onContribution(uint totalContributed, address indexed investor, uint256 amount, uint investorsCount);
+    event onCompensated(address indexed contributor, uint256 amount);
     event StateChange(uint state);
     event onInitalRateSet(uint rate);
     event onReturnRateSet(uint rate);
@@ -174,6 +174,11 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         emit StateChange(uint(state));
     }
 
+    function checkInvestorContribution(address investor) public view returns(uint256){
+        return investors[investor].amount;
+    }
+
+
     /**
      * Method to reclaim contribution after a project is declared as not funded
      * @param  beneficiary the contributor
@@ -181,14 +186,14 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
      */
     function reclaimContribution(address beneficiary) external {
         require(state == LendingState.ProjectNotFunded);
-        uint contribution = investors[beneficiary].amount;
+        uint256 contribution = investors[beneficiary].amount;
         require(contribution > 0);
         beneficiary.transfer(contribution);
     }
 
     function reclaimContributionWithInterest(address beneficiary) external {
         require(state == LendingState.ContributionReturned);
-        uint contribution = investors[beneficiary].amount.mul(initialEthPerFiatRate).mul(investorInterest()).div(borrowerReturnEthPerFiatRate).div(interestBaseUint);
+        uint256 contribution = investors[beneficiary].amount.mul(initialEthPerFiatRate).mul(investorInterest()).div(borrowerReturnEthPerFiatRate).div(interestBaseUint);
         require(contribution > 0);
         beneficiary.transfer(contribution);
     }
