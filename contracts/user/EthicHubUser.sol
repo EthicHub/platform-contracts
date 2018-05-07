@@ -22,7 +22,7 @@ pragma solidity ^0.4.23;
 
 import '../ownership/Ownable.sol';
 import '../EthicHubBase.sol';
-import '../reputation/EthicHubReputation.sol';
+import '../reputation/EthicHubReputationInterface.sol';
 
 /* @title User
 @dev This is an extension to add user
@@ -90,7 +90,7 @@ contract EthicHubUser is Ownable, EthicHubBase {
         bool isRegistered = ethicHubStorage.getBool(keccak256("user", "localNode", target));
         if (!isRegistered) {
             ethicHubStorage.setBool(keccak256("user", "localNode", target), true);
-            EthicHubReputation rep = EthicHubReputation(ethicHubStorage.getAddress(keccak256("contract.name", "reputation")));
+            EthicHubReputationInterface rep = EthicHubReputationInterface (ethicHubStorage.getAddress(keccak256("contract.name", "reputation")));
             rep.initLocalNodeReputation(target);
         }
     }
@@ -105,7 +105,7 @@ contract EthicHubUser is Ownable, EthicHubBase {
         bool isRegistered = ethicHubStorage.getBool(keccak256("user", "community", target));
         if (!isRegistered) {
             ethicHubStorage.setBool(keccak256("user", "community", target), true);
-            EthicHubReputation rep = EthicHubReputation(ethicHubStorage.getAddress(keccak256("contract.name", "reputation")));
+            EthicHubReputationInterface rep = EthicHubReputationInterface(ethicHubStorage.getAddress(keccak256("contract.name", "reputation")));
             rep.initCommunityReputation(target);
         }
     }
