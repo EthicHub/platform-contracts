@@ -479,21 +479,44 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             const balance = await web3.eth.getBalance(this.lending.address);
             balance.toNumber().should.be.below(2);
 
-            //console.log("---> Investor 2");
             const investor2FinalBalance = await web3.eth.getBalance(investor2);
             const expectedInvestor2Balance = getExpectedInvestorBalance(investor2InitialBalance, investment2, this);
-            checkInvestmentResults(investor2InitialBalance,investor2SendTransactionBalance,expectedInvestor2Balance,investor2FinalBalance);
+            //console.log("---> Investor 2");
+            //checkInvestmentResults(investor2InitialBalance,investor2SendTransactionBalance,expectedInvestor2Balance,investor2FinalBalance);
+            checkLostinTransactions(expectedInvestor2Balance,investor2FinalBalance);
 
-            //console.log("---> Investor 3");
             const investor3FinalBalance = await web3.eth.getBalance(investor3);
             const expectedInvestor3Balance = getExpectedInvestorBalance(investor3InitialBalance, investment3, this);
-            checkInvestmentResults(investor3InitialBalance,investor3SendTransactionBalance,expectedInvestor3Balance,investor3FinalBalance);
+            //console.log("---> Investor 3");
+            //checkInvestmentResults(investor3InitialBalance,investor3SendTransactionBalance,expectedInvestor3Balance,investor3FinalBalance);
+            checkLostinTransactions(expectedInvestor3Balance,investor3FinalBalance);
 
-            //console.log("---> Investor 4");
             const investor4FinalBalance = await web3.eth.getBalance(investor4);
             const expectedInvestor4Balance = getExpectedInvestorBalance(investor4InitialBalance, investment4, this);
-            checkInvestmentResults(investor4InitialBalance,investor4SendTransactionBalance,expectedInvestor4Balance,investor4FinalBalance);
+            //console.log("---> Investor 4");
+            //checkInvestmentResults(investor4InitialBalance,investor4SendTransactionBalance,expectedInvestor4Balance,investor4FinalBalance);
+            checkLostinTransactions(expectedInvestor4Balance,investor4FinalBalance);
 
+        });
+
+        it('Should not allow reclaim twice the funds', async function() {
+            await increaseTimeTo(this.fundingStartTime  + duration.days(1));
+
+            const investment2 = ether(1);
+            const investment3 = ether(2);
+
+            const investor2InitialBalance = await web3.eth.getBalance(investor2);
+            const investor3InitialBalance = await web3.eth.getBalance(investor3);
+
+            await this.lending.sendTransaction({value: investment2, from: investor2}).should.be.fulfilled;
+            await this.lending.sendTransaction({value: investment3, from: investor3}).should.be.fulfilled;
+
+            await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
+            await this.lending.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
+            await this.lending.reclaimContributionWithInterest(investor2, {from: investor2}).should.be.fulfilled;
+            await this.lending.reclaimContributionWithInterest(investor2, {from: investor2}).should.be.rejectedWith(EVMRevert);
         });
 
         it('Should not allow returns when contract have balance in other state', async function() {
@@ -559,19 +582,20 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
     }
 
     function checkInvestmentResults(investorInitialBalance, sendTransactionBalance, expected, actual) {
-        //console.log("Initial balance:");
-        //console.log(utils.fromWei(utils.toBN(investorInitialBalance), 'ether'));
-        //console.log("Send tx balance:");
-        //console.log(utils.fromWei(utils.toBN(sendTransactionBalance), 'ether'));
-        //console.log("Final balance:");
-        //console.log(utils.fromWei(utils.toBN(actual), 'ether'));
-        //console.log("Expected balance:");
-        //console.log(utils.fromWei(utils.toBN(Math.floor(expected.toNumber())), 'ether'));
+        console.log("Initial balance:");
+        console.log(utils.fromWei(utils.toBN(investorInitialBalance), 'ether'));
+        console.log("Send tx balance:");
+        console.log(utils.fromWei(utils.toBN(sendTransactionBalance), 'ether'));
+        console.log("Final balance:");
+        console.log(utils.fromWei(utils.toBN(actual), 'ether'));
+        console.log("Expected balance:");
+        console.log(utils.fromWei(utils.toBN(Math.floor(expected.toNumber())), 'ether'));
+    }
+
+    function checkLostinTransactions(expected, actual) {
         const lost = expected.sub(actual);
         //console.log("Perdida:" + utils.fromWei(utils.toBN(Math.floor(lost.toNumber())), 'ether'));
-        // Exactamente segun el test
-        //lost.should.be.bignumber.equal('17375700000000000');
-        // Menor que 0.02 eth
+        // /* Should be below 0.02 eth */
         lost.should.be.bignumber.below('20000000000000000');
     }
 

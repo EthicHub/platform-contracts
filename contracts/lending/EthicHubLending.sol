@@ -188,6 +188,8 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.ProjectNotFunded);
         uint256 contribution = investors[beneficiary].amount;
         require(contribution > 0);
+        require(!investors[beneficiary].isCompensated);
+        investors[beneficiary].isCompensated = true;
         beneficiary.transfer(contribution);
     }
 
@@ -195,6 +197,8 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.ContributionReturned);
         uint256 contribution = investors[beneficiary].amount.mul(initialEthPerFiatRate).mul(investorInterest()).div(borrowerReturnEthPerFiatRate).div(interestBaseUint);
         require(contribution > 0);
+        require(!investors[beneficiary].isCompensated);
+        investors[beneficiary].isCompensated = true;
         beneficiary.transfer(contribution);
     }
 
