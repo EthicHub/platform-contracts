@@ -22,6 +22,7 @@ pragma solidity ^0.4.23;
 
 import '../ownership/Ownable.sol';
 import '../EthicHubBase.sol';
+import '../reputation/EthicHubReputationInterface.sol';
 
 /* @title User
 @dev This is an extension to add user
@@ -68,7 +69,6 @@ contract EthicHubUser is Ownable, EthicHubBase {
         }
     }
 
-
     /**
      * @dev View registration status of an address for participation.
      * @return isRegistered boolean registration status of address for a specific profile.
@@ -79,4 +79,36 @@ contract EthicHubUser is Ownable, EthicHubBase {
     {
         isRegistered = ethicHubStorage.getBool(keccak256("user", profile, target));
     }
+
+    /**
+     * @dev register a localNode address.
+     */
+    function registerLocalNode(address target)
+        external
+        onlyOwner
+    {
+        bool isRegistered = ethicHubStorage.getBool(keccak256("user", "localNode", target));
+        if (!isRegistered) {
+            ethicHubStorage.setBool(keccak256("user", "localNode", target), true);
+            EthicHubReputationInterface rep = EthicHubReputationInterface (ethicHubStorage.getAddress(keccak256("contract.name", "reputation")));
+            rep.initLocalNodeReputation(target);
+        }
+    }
+
+    /**
+     * @dev register a community address.
+     */
+    function registerCommunity(address target)
+        external
+        onlyOwner
+    {
+        bool isRegistered = ethicHubStorage.getBool(keccak256("user", "community", target));
+        if (!isRegistered) {
+            ethicHubStorage.setBool(keccak256("user", "community", target), true);
+            EthicHubReputationInterface rep = EthicHubReputationInterface(ethicHubStorage.getAddress(keccak256("contract.name", "reputation")));
+            rep.initCommunityReputation(target);
+        }
+    }
+
+
 }

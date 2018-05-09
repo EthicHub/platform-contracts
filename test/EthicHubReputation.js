@@ -19,7 +19,7 @@ const EthicHubBase = artifacts.require('EthicHubBase');
 
 contract('EthicHubReputation', function ([owner, community, localNode, lendingContract]) {
     beforeEach(async function () {
-        await advanceBlock();
+        //await advanceBlock();
         this.maxDefaultDays = new BigNumber(100);
         //10 with 2 decimals
         this.maxReputation = new BigNumber(1000);
@@ -363,8 +363,26 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
 
             await this.reputation.incrementReputation({from: lendingContract}).should.be.rejectedWith(EVMRevert);
         });
+    });
 
+    describe('reputation default values', function() {
+        it('Should initialize localNode reputation', async function() {
+            // set fake user contract using owner
+            await this.mockStorage.setAddress(utils.soliditySha3("contract.name", "users"), owner);
+            await this.reputation.initLocalNodeReputation(localNode).should.be.fulfilled;
+            const default_rep = await this.reputation.initReputation();
+            var rep = await this.mockStorage.getUint(utils.soliditySha3("localNode.reputation", localNode)).should.be.fulfilled;
+            default_rep.should.be.bignumber.equal(rep);
+        });
 
+        it('Should initialize community reputation', async function() {
+            // set fake user contract using owner
+            await this.mockStorage.setAddress(utils.soliditySha3("contract.name", "users"), owner);
+            await this.reputation.initCommunityReputation(community).should.be.fulfilled;
+            const default_rep = await this.reputation.initReputation();
+            const rep = await this.mockStorage.getUint(utils.soliditySha3("community.reputation", community)).should.be.fulfilled;
+            default_rep.should.be.bignumber.equal(rep);
+        });
 
     });
 });

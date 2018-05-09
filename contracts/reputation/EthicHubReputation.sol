@@ -11,6 +11,7 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
     uint reputationStep = 100;
     //Tier 1 x 20 people
     uint minProyect = 20;
+    uint constant public initReputation = 500;
 
     //0.05
     uint incrLocalNodeMultiplier = 5;
@@ -20,6 +21,14 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
     event ReputationUpdated(address indexed affected, uint newValue);
 
     event Log(uint value);
+
+    /*** Modifiers ************/
+
+    /// @dev Only allow access from the latest version of a contract in the Rocket Pool network after deployment
+    modifier onlyUsersContract() {
+        require(ethicHubStorage.getAddress(keccak256("contract.name", "users")) == msg.sender);
+        _;
+    }
 
     /// @dev constructor
     constructor(address _storageAddress) EthicHubBase(_storageAddress) public {
@@ -125,5 +134,15 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
     }
 
 
+    function initLocalNodeReputation(address localNode) onlyUsersContract external {
+        require(ethicHubStorage.getUint(keccak256("localNode.reputation", localNode)) == 0);
+        ethicHubStorage.setUint(keccak256("localNode.reputation", localNode), initReputation);
+    }
+
+
+    function initCommunityReputation(address community) onlyUsersContract external {
+        require(ethicHubStorage.getUint(keccak256("comunity.reputation", community)) == 0);
+        ethicHubStorage.setUint(keccak256("community.reputation", community), initReputation);
+    }
 
 }
