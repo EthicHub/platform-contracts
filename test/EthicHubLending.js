@@ -28,7 +28,7 @@ const MockReputation = artifacts.require('./helper_contracts/MockReputation.sol'
 
 contract('EthicHubLending', function ([owner, borrower, investor, investor2, investor3, investor4, investor5, localNode, ethicHubTeam, wallet]) {
     beforeEach(async function () {
-        //await advanceBlock();
+        await advanceBlock();
 
         this.fundingStartTime = latestTime() + duration.days(1);
         this.fundingEndTime = this.fundingStartTime + duration.days(40);
@@ -104,6 +104,13 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             var isRunning = await this.lending.isContribPeriodRunning();
             isRunning.should.be.equal(false);
             await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.rejectedWith(EVMRevert);
+        });
+
+        it.only('should allow to check investor contribution amount', async function () {
+            await increaseTimeTo(this.fundingStartTime + duration.days(1))
+            await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.fulfilled;
+            const contributionAmount = await this.lending.checkInvestorContribution(investor);
+            contributionAmount.should.be.bignumber.equal(new BigNumber(ether(1)));
         });
 
         it('should allow to invest in contribution period', async function () {
