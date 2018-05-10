@@ -14,4 +14,12 @@ contract MockReputation is EthicHubReputationInterface {
     function incrementReputation() external {
         incrementCalled = true;
     }
+
+    function initLocalNodeReputation(address localNode) onlyUsersContract external {
+        uint blah = 2;
+    }
+
+    function initCommunityReputation(address community) onlyUsersContract external {
+        uint blah = 2;
+    }
 }

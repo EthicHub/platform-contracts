@@ -12,6 +12,10 @@ const userManager = artifacts.require('./user/EthicHubUser.sol');
 
 // Deploy EthicHub network
 module.exports = async (deployer, network) => {
+    if (network !== 'ganache' && network !== 'development') {
+        console.log("Skipping deploying EthicHub in dev networks");
+        return;
+    }
     console.log("--> Deploying EthicHubStorage...");
     return deployer.deploy(storage).then(() => {
         //Contract management
