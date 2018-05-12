@@ -422,8 +422,10 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
             const endTime = await this.lending.fundingEndTime()
-            const defaultTime = endTime + duration.days(this.lendingDays) + duration.days(this.defaultMaxDays);
+            const defaultTime = endTime.add(duration.days(this.lendingDays)).add(duration.days(this.defaultMaxDays));
             increaseTimeTo(defaultTime);
+            // send invalid transaction to advance time
+            await this.lending.sendTransaction({value: 1, from: borrower}).should.be.rejectedWith(EVMRevert);
             var tx = await this.lending.declareProjectDefault().should.be.fulfilled;
             var calledBurn = await this.mockReputation.burnCalled();
             calledBurn.should.be.equal(true);
@@ -587,7 +589,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
         console.log("Final balance:");
         console.log(utils.fromWei(utils.toBN(actual), 'ether'));
         console.log("Expected balance:");
-        console.log(utils.fromWei(utils.toBN(Math.floor(expected.toNumber())), 'ether'));
+        console.log(utils.fromWei(utils.toBN(expected), 'ether'));
     }
 
     function checkLostinTransactions(expected, actual) {
