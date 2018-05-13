@@ -60,6 +60,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     event onCapReached(uint endTime);
     event onContribution(uint totalContributed, address indexed investor, uint amount, uint investorsCount);
     event onCompensated(address indexed contributor, uint amount);
+    event onSurplusSent(uint256 amount);
     event onSurplusReclaimed(address indexed contributor, uint amount);
     event StateChange(uint state);
     event onInitalRateSet(uint rate);
@@ -130,7 +131,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     }
 
     function() public payable whenNotPaused {
-        require(state == LendingState.AwaitingReturn || state == LendingState.AcceptingContributions);
+        require(state == LendingState.AwaitingReturn || state == LendingState.AcceptingContributions || state == LendingState.ExchangingToFiat);
         if(state == LendingState.AwaitingReturn) {
             returnBorrowedEth();
         } else if (state == LendingState.ExchangingToFiat && msg.sender == borrower){
@@ -145,6 +146,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.ExchangingToFiat && msg.sender == borrower);
         surplusEth = surplusEth.add(msg.value);
         require(surplusEth <= totalLendingAmount);
+        onSurplusSent(msg.value);
     }
 
     /**
@@ -181,7 +183,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.ExchangingToFiat);
         initialEthPerFiatRate = _initialEthPerFiatRate;
         if (surplusEth > 0){
-            totalLendingFiatAmount = totalLendingFiatAmount.sub(surplusEth);
+            totalLendingAmount = totalLendingAmount.sub(surplusEth);
         }
         totalLendingFiatAmount = totalLendingAmount.mul(initialEthPerFiatRate);
         emit onInitalRateSet(initialEthPerFiatRate);
@@ -213,7 +215,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         // only can be reclaimed after cap reduced
         require(state != LendingState.ExchangingToFiat);
         require(!investors[beneficiary].surplusEthReclaimed);
-        uint256 surplusContribution = investors[beneficiary].amount.mul(surplusEth).div(totalLendingAmount);
+        uint256 surplusContribution = investors[beneficiary].amount.mul(surplusEth).div(surplusEth.add(totalLendingAmount));
         require(surplusContribution > 0);
         investors[beneficiary].surplusEthReclaimed = true;
         onSurplusReclaimed(beneficiary, surplusContribution);

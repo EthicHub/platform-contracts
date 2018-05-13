@@ -28,7 +28,7 @@ const MockReputation = artifacts.require('./helper_contracts/MockReputation.sol'
 
 contract('EthicHubLending', function ([owner, borrower, investor, investor2, investor3, investor4, investor5, localNode, ethicHubTeam, wallet]) {
     beforeEach(async function () {
-        await advanceBlock();
+        //await advanceBlock();
         this.fundingStartTime = latestTime() + duration.days(1);
         this.fundingEndTime = this.fundingStartTime + duration.days(40);
         this.lendingInterestRatePercentage = 15;
@@ -571,6 +571,92 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
 
     })
 
+    describe('Send partial return', async function() {
+
+        it('Should allow to send partial return before the rate is set', async function() {
+            await increaseTimeTo(this.fundingStartTime + duration.days(1));
+            await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
+
+            await this.lending.sendTransaction({value: ether(1), from: borrower}).should.be.fulfilled;
+            await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+        })
+
+        it('Should not allow to send more than collected return', async function() {
+            await increaseTimeTo(this.fundingStartTime  + duration.days(1));
+            await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
+
+            await this.lending.sendTransaction({value: this.totalLendingAmount.add(ether(1)), from: borrower}).should.be.rejectedWith(EVMRevert);
+        })
+
+        it('Should not allow to send partial return after the rate is set', async function() {
+            await increaseTimeTo(this.fundingStartTime  + duration.days(1));
+            await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
+
+            await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            await this.lending.sendTransaction({value: ether(1), from: borrower}).should.be.rejectedWith(EVMRevert);
+        })
+
+        it('Should only allow borrower to send partial return', async function() {
+            await increaseTimeTo(this.fundingStartTime  + duration.days(1));
+            await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
+
+            await this.lending.sendTransaction({value: ether(1), from: investor2}).should.be.rejectedWith(EVMRevert);
+            await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+        })
+
+        it('Should allow to reclaim partial return from contributor', async function() {
+            await increaseTimeTo(this.fundingStartTime  + duration.days(1));
+
+            const investorInvestment = ether(1);
+            const investor2Investment = ether(2);
+            const surplus = ether(1);
+            await this.lending.sendTransaction({value: investorInvestment , from: investor}).should.be.fulfilled;
+            await this.lending.sendTransaction({value: investor2Investment, from: investor2}).should.be.fulfilled;
+
+
+            // send surplus 1 eth
+            await this.lending.sendTransaction({value: surplus, from: borrower}).should.be.fulfilled
+            await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+
+            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            var investorInitialBalance = await web3.eth.getBalance(investor);
+            var investor2InitialBalance = await web3.eth.getBalance(investor2);
+            await this.lending.reclaimSurplusEth(investor).should.be.fulfilled;
+            await this.lending.reclaimSurplusEth(investor2).should.be.fulfilled;
+
+
+            var investorFinalBalance = await web3.eth.getBalance(investor);
+            var expectedInvestorBalance = investorInitialBalance.add(ether(1).div(3));
+            checkLostinTransactions(expectedInvestorBalance,investorFinalBalance);
+
+            var investor2FinalBalance = await web3.eth.getBalance(investor2);
+            var expectedInvestor2Balance = investor2InitialBalance.add(ether(2).div(3));
+            checkLostinTransactions(expectedInvestor2Balance,investor2FinalBalance);
+
+
+            const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
+            //console.log("borrowerReturnAmount: " + utils.fromWei(utils.toBN(borrowerReturnAmount)));
+            await this.lending.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
+
+            var investorInitialBalance = await web3.eth.getBalance(investor);
+            var investor2InitialBalance = await web3.eth.getBalance(investor2);
+            await this.lending.reclaimContributionWithInterest(investor).should.be.fulfilled;
+            await this.lending.reclaimContributionWithInterest(investor2).should.be.fulfilled;
+
+
+            var investorFinalBalance = await web3.eth.getBalance(investor);
+            var expectedInvestorBalance = getExpectedInvestorBalance(investorInitialBalance, investorInvestment.sub(ether(1).div(3)), this)
+            checkLostinTransactions(expectedInvestorBalance,investorFinalBalance);
+
+            var investor2FinalBalance = await web3.eth.getBalance(investor2);
+            var expectedInvestor2Balance = getExpectedInvestorBalance(investorInitialBalance, investor2Investment.sub(ether(2).div(3)), this);
+            checkLostinTransactions(expectedInvestor2Balance,investor2FinalBalance);
+
+        })
+
+
+
+    })
 
     function getExpectedInvestorBalance(initialAmount,contribution,testEnv) {
 
