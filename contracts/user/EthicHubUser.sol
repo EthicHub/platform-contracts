@@ -110,5 +110,18 @@ contract EthicHubUser is Ownable, EthicHubBase {
         }
     }
 
+    /**
+     * @dev register a invertor address.
+     */
+    function registerInvestor(address target)
+        external
+        onlyOwner
+    {
+        bool isRegistered = ethicHubStorage.getBool(keccak256("user", "investor", target));
+        if (!isRegistered) {
+            ethicHubStorage.setBool(keccak256("user", "investor", target), true);
+        }
+    }
+
 
 }
