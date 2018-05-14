@@ -25,92 +25,51 @@ const should = require('chai')
   .use(require('chai-as-promised'))
   .use(require('chai-bignumber')(BigNumber))
   .should()
+const web3_1_0 = require('web3');
+const utils = web3_1_0.utils;
 const storage = artifacts.require('./storage/EthicHubStorage.sol');
 const userManager = artifacts.require('./user/EthicHubUser.sol');
 const lending = artifacts.require('./lending/EthicHubLending.sol');
+//const lending = artifacts.require('./lending/EthicHubLending.sol');
 // Default key pairs made by testrpc when using `truffle develop` CLI tool
 // NEVER USE THESE KEYS OUTSIDE OF THE LOCAL TEST ENVIRONMENT
 const privateKeys = [
   'c87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3',
   'ae6ae8e5ccbfb04590405997ee2d52d2b330726137b875053c36d94e974d162f',
   '0dbbe8e4ae425a6d2687f1a7e3ba17bc98c673636790f1b8ad91193c05875ef1',
-  'c88b703fb08cbea894b6aeff5a544fb92e78a18e19814cd85da83b71f772aa6c'
+  'c88b703fb08cbea894b6aeff5a544fb92e78a18e19814cd85da83b71f772aa6c',
+  '388c684f0ba1ef5017716adb5d21a053ea8e90277d0868337519f97bede61418'
 ];
 
-function now() {
-  return Math.round((new Date()).getTime() / 1000);
-}
-
-const duration = {
-  seconds: function (val) { return val },
-  minutes: function (val) { return val * this.seconds(60) },
-  hours: function (val) { return val * this.minutes(60) },
-  days: function (val) { return val * this.hours(24) },
-  weeks: function (val) { return val * this.days(7) },
-  years: function (val) { return val * this.days(365) }
-};
-
-function ether(n) {
-  return new web3.BigNumber(web3.toWei(n, 'ether'))
-}
-
-
-async function deployContracts (deployer, network, accounts) {
+async function deployedContracts () {
 
     const instances = await Promise.all([
         storage.deployed(),
-        userManager.deployed(storage.address)
+        userManager.deployed()
     ]);
     return instances;
-    //const storageInstance = instances[0];
-    //const userManagerInstance = instances[1];
 }
+const localNode = web3.eth.accounts[1];
+const community = web3.eth.accounts[2];
+const investor = web3.eth.accounts[3];
+const teamEH = web3.eth.accounts[4];
 
-// "registro de un investor" "registro de un local node", "registro de comunidad"
-contract('EthicHubUser', function(accounts) {
+contract('EthicHubUser', function() {
   let instances;
   let storageInstance;
   let userManagerInstance;
-  //let lendingInstance;
   let ownerUserManager;
-  let ownerLending;
   let web3Contract;
-  const localNode = accounts[1];
-  const community = accounts[2];
-  const teamEH = accounts[3];
   before(async () => {
-    //instances = await Promise.all([
-    //    storage.deployed(),
-    //    userManager.deployed(storage.address),
-    //    deployer.deployed(
-    //      lending,
-    //      now() + duration.minutes(5),//fundingStartTime
-    //      now() + duration.minutes(35),//fundingEndTime
-    //      community,//borrower (community)
-    //      115,//lendingInterestRatePercentage
-    //      ether(3),//totalLendingAmount
-    //      2,//lendingDays
-    //      storage.address, //storageAddress
-    //      localNode,//localNode
-    //      teamEH//team
-    //  )
-    //]);
-    instances = await deployContracts();
+    instances = await deployedContracts();
     storageInstance = instances[0];
     userManagerInstance = instances[1];
-    //lendingInstance = instances[2];
-    //storageInstance = await storage.deployed();
-    //userManagerInstance = await userManager.deployed(storageInstance.address);
     web3Contract = web3.eth.contract(userManagerInstance.abi).at(userManagerInstance.address);
     ownerUserManager = web3Contract._eth.coinbase;
-    //web3Contract = web3.eth.contract(lendingInstance.abi).at(lendingInstance.address);
-    //ownerLending = web3Contract._eth.coinbase;
   });
-  it('should pass if contracts are deployed', async function() {
-    let userManagerContractName = await userManagerInstance.name.call();
-    //let lendingContractName = await lendingInstance.name.call();
-    userManagerContractName.should.be.equal('EthicHubUser');
-    //lendingContractName.should.be.equal('EthicHubLending');
+  it('should pass if contract are on storage contract', async function() {
+    let userManagerContractAddress = await storageInstance.getAddress(utils.soliditySha3("contract.name", "users"));
+    userManagerContractAddress.should.be.equal(userManagerInstance.address);
   });
   it('should register local node', async function() {
     await userManagerInstance.registerLocalNode(localNode);
@@ -122,7 +81,29 @@ contract('EthicHubUser', function(accounts) {
     let registrationStatus = await userManagerInstance.viewRegistrationStatus(community, 'community');
     registrationStatus.should.be.equal(true);
   });
+  it('should register investor', async function() {
+    await userManagerInstance.registerInvestor(investor);
+    let registrationStatus = await userManagerInstance.viewRegistrationStatus(investor, 'investor');
+    registrationStatus.should.be.equal(true);
+  });
 });
+
+//contract('EthicHubLending', function() {
+//  let instances;
+//  let storageInstance;
+//  //let lendingInstance;
+//  before(async () => {
+//    instances = await deployedContracts();
+//    storageInstance = instances[0];
+//    lendingInstance = await lending.deployed(storageInstance.address);
+//    //web3Contract = web3.eth.contract(lendingInstance.abi).at(lendingInstance.address);
+//    //ownerLending = web3Contract._eth.coinbase;
+//  });
+//  it('should pass if contract are on storage contract', async function() {
+//    let lendingContractAddress = await storageInstance.getAddress(utils.soliditySha3("contract.address", lending.address));
+//    lendingContractAddress.should.be.equal(lending.address);
+//  });
+//});
 /*
  * Call a smart contract function from any keyset in which the caller has the
  *     private and public keys.
