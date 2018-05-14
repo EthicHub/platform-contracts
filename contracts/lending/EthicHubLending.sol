@@ -48,16 +48,20 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     bool public localNodeFeeReclaimed; 
     bool public ethicHubTeamFeeReclaimed;
     EthicHubReputationInterface reputation = EthicHubReputationInterface(0);
+    uint256 public surplusEth;
 
     struct Investor {
         uint256 amount;
         bool isCompensated;
+        bool surplusEthReclaimed;
     }
 
     // events
     event onCapReached(uint endTime);
-    event onContribution(uint totalContributed, address indexed investor, uint256 amount, uint investorsCount);
-    event onCompensated(address indexed contributor, uint256 amount);
+    event onContribution(uint totalContributed, address indexed investor, uint amount, uint investorsCount);
+    event onCompensated(address indexed contributor, uint amount);
+    event onSurplusSent(uint256 amount);
+    event onSurplusReclaimed(address indexed contributor, uint amount);
     event StateChange(uint state);
     event onInitalRateSet(uint rate);
     event onReturnRateSet(uint rate);
@@ -127,12 +131,22 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     }
 
     function() public payable whenNotPaused {
-        require(state == LendingState.AwaitingReturn || state == LendingState.AcceptingContributions);
+        require(state == LendingState.AwaitingReturn || state == LendingState.AcceptingContributions || state == LendingState.ExchangingToFiat);
         if(state == LendingState.AwaitingReturn) {
             returnBorrowedEth();
+        } else if (state == LendingState.ExchangingToFiat && msg.sender == borrower){
+            // borrower can send surplus eth back to contract to avoid paying interest
+            sendBackSurplusEth();
         } else {
             contributeWithAddress(msg.sender);
         }
+    }
+
+    function sendBackSurplusEth() public payable {
+        require(state == LendingState.ExchangingToFiat && msg.sender == borrower);
+        surplusEth = surplusEth.add(msg.value);
+        require(surplusEth <= totalLendingAmount);
+        onSurplusSent(msg.value);
     }
 
     /**
@@ -163,11 +177,14 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         emit onReturnRateSet(borrowerReturnEthPerFiatRate);
 
     }
-
+    
     function finishInitialExchangingPeriod(uint256 _initialEthPerFiatRate) external onlyOwner {
         require(capReached == true);
         require(state == LendingState.ExchangingToFiat);
         initialEthPerFiatRate = _initialEthPerFiatRate;
+        if (surplusEth > 0){
+            totalLendingAmount = totalLendingAmount.sub(surplusEth);
+        }
         totalLendingFiatAmount = totalLendingAmount.mul(initialEthPerFiatRate);
         emit onInitalRateSet(initialEthPerFiatRate);
         state = LendingState.AwaitingReturn;
@@ -193,9 +210,25 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         beneficiary.transfer(contribution);
     }
 
+    function reclaimSurplusEth(address beneficiary) external {
+        require(surplusEth > 0);
+        // only can be reclaimed after cap reduced
+        require(state != LendingState.ExchangingToFiat);
+        require(!investors[beneficiary].surplusEthReclaimed);
+        uint256 surplusContribution = investors[beneficiary].amount.mul(surplusEth).div(surplusEth.add(totalLendingAmount));
+        require(surplusContribution > 0);
+        investors[beneficiary].surplusEthReclaimed = true;
+        onSurplusReclaimed(beneficiary, surplusContribution);
+        beneficiary.transfer(surplusContribution);
+    }
+
     function reclaimContributionWithInterest(address beneficiary) external {
         require(state == LendingState.ContributionReturned);
-        uint256 contribution = investors[beneficiary].amount.mul(initialEthPerFiatRate).mul(investorInterest()).div(borrowerReturnEthPerFiatRate).div(interestBaseUint);
+        uint256 investorAmount = investors[beneficiary].amount;
+        if (surplusEth > 0){
+            investorAmount  = investors[beneficiary].amount.mul(totalLendingAmount.sub(surplusEth)).div(totalLendingAmount);
+        }
+        uint256 contribution = investorAmount.mul(initialEthPerFiatRate).mul(investorInterest()).div(borrowerReturnEthPerFiatRate).div(interestBaseUint);
         require(contribution > 0);
         require(!investors[beneficiary].isCompensated);
         investors[beneficiary].isCompensated = true;
