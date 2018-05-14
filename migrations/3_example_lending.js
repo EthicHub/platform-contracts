@@ -3,7 +3,7 @@ const BigNumber = web3.BigNumber
 const utils = web3_1_0.utils;
 
 
-const cmc = artifacts.require('./EthichubCMC.sol');
+const cmc = artifacts.require('./EthicHubCMC.sol');
 const userManager = artifacts.require('./user/EthicHubUser.sol');
 const lending = artifacts.require('./lending/EthicHubLending.sol');
 const storage = artifacts.require('./storage/EthicHubStorage.sol');
@@ -31,7 +31,7 @@ function now() {
 
 module.exports = async (deployer, network, accounts) => {
 
-    if (network !== 'ganache' && network !== 'development') {
+    if (network !== 'ganache' && network !== 'development' && network !== 'develop') {
         console.log("Skipping example lending on dev networks");
         return;
     }
@@ -46,6 +46,7 @@ module.exports = async (deployer, network, accounts) => {
     //Using accounts [0] because is the only one unlocked by truffle migrate
     await userManagerInstance.changeUserStatus(accounts[0],"localNode",true);
 
+    console.log("--> Deploying EthicHubLending...");
     return deployer.deploy(
         lending,
         //Arguments
@@ -62,12 +63,14 @@ module.exports = async (deployer, network, accounts) => {
         return lending.deployed().then(async (lendingInstance) => {
             //Gives set permissions on storage
             await cmcInstance.addNewLendingContract(lendingInstance.address);
+            console.log("--> EthicHubLending deployed");
             //Lending saves parameters in storage, checks if owner is localNode
             await lendingInstance.saveInitialParametersToStorage(
                 90,
                 1,
                 20
             )
+            console.log("--> EthicHub network ready");
         });
     });
 };
