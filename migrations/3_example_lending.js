@@ -31,7 +31,7 @@ function now() {
 
 module.exports = async (deployer, network, accounts) => {
 
-    if (network !== 'ganache' && network !== 'development') {
+    if (network === 'ganache' || network === 'development') {
         console.log("Skipping example lending on dev networks");
         return;
     }
@@ -56,8 +56,8 @@ module.exports = async (deployer, network, accounts) => {
         ether(3),//_totalLendingAmount
         2,//_lendingDays
         storageInstance.address, //_storageAddress
-        accounts[3],//localNode 
-        accounts[4]//team 
+        accounts[3],//localNode
+        accounts[4]//team
     ).then(() => {
         return lending.deployed().then(async (lendingInstance) => {
             //Gives set permissions on storage
