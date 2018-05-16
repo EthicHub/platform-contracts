@@ -117,10 +117,7 @@ contract EthicHubUser is Ownable, EthicHubBase {
         external
         onlyOwner
     {
-        bool isRegistered = ethicHubStorage.getBool(keccak256("user", "investor", target));
-        if (!isRegistered) {
-            ethicHubStorage.setBool(keccak256("user", "investor", target), true);
-        }
+        ethicHubStorage.setBool(keccak256("user", "investor", target), true);
     }
 
 
