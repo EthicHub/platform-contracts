@@ -8,6 +8,7 @@ mainmenu () {
   echo "2 - EthicHubReputation"
   echo "3 - EthicHubBase"
   echo "4 - EthicHubUser"
+  echo "5 - EthicHubIntegration"
   echo "x - exit program"
 
   read  -n 1 -p "Input Selection:" mainmenuinput
@@ -21,7 +22,8 @@ mainmenu () {
         elif [ "$mainmenuinput" = "4" ]; then
             bash $SCRIPT_PATH  test test/EthicHubUser.js 
         elif [ "$mainmenuinput" = "5" ]; then
-            bash $SCRIPT_PATH test/FixedPoolWithBonusTokenDistribution.js test/helpers/FixedPoolWithBonusTokenDistributionMock.sol
+            bash $SCRIPT_PATH test test/EthicHubIntegration.js  
+
         elif [ "$mainmenuinput" = "x" ];then
             exit 0
         else
