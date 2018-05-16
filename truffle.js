@@ -4,7 +4,8 @@ require('dotenv').config();
 
 var HDWalletProvider = require("truffle-hdwallet-provider");
 
-let mnemonic = process.env.MNEMONIC;
+//let mnemonic = process.env.MNEMONIC;
+
 
 module.exports = {
   solc: {
@@ -28,12 +29,12 @@ module.exports = {
     },
     rinkeby: {
       provider: function() {
-        return new HDWalletProvider(mnemonic, "https://rinkeby.infura.io/"+process.env.INFURA_KEY)
+        return new HDWalletProvider(mnemonic, "https://rinkeby.infura.io/"+process.env.INFURA_KEY);
       },
       network_id: '*',
       gasLimit: 6000000,
       gas: 4700000
-    },
+    }
 
   }
 };
