@@ -1,7 +1,7 @@
 const web3_1_0 = require('web3');
 const BigNumber = web3.BigNumber
 const utils = web3_1_0.utils;
-
+const fs = require('fs');
 
 const cmc = artifacts.require('./EthicHubCMC.sol');
 const userManager = artifacts.require('./user/EthicHubUser.sol');
@@ -61,6 +61,7 @@ module.exports = async (deployer, network, accounts) => {
         accounts[4]//team 
     ).then(() => {
         return lending.deployed().then(async (lendingInstance) => {
+
             //Gives set permissions on storage
             await cmcInstance.addNewLendingContract(lendingInstance.address);
             console.log("--> EthicHubLending deployed");
@@ -70,6 +71,9 @@ module.exports = async (deployer, network, accounts) => {
                 1,
                 20
             )
+            envFileData = "lending="+lendingInstance.address
+            fs.appendFileSync(".env", envFileData)
+
             console.log("--> EthicHub network ready");
         });
     });
