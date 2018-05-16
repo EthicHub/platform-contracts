@@ -30,7 +30,6 @@ const utils = web3_1_0.utils;
 const storage = artifacts.require('./storage/EthicHubStorage.sol');
 const userManager = artifacts.require('./user/EthicHubUser.sol');
 const lending = artifacts.require('./lending/EthicHubLending.sol');
-//const lending = artifacts.require('./lending/EthicHubLending.sol');
 // Default key pairs made by testrpc when using `truffle develop` CLI tool
 // NEVER USE THESE KEYS OUTSIDE OF THE LOCAL TEST ENVIRONMENT
 const privateKeys = [
@@ -38,21 +37,28 @@ const privateKeys = [
   'ae6ae8e5ccbfb04590405997ee2d52d2b330726137b875053c36d94e974d162f',
   '0dbbe8e4ae425a6d2687f1a7e3ba17bc98c673636790f1b8ad91193c05875ef1',
   'c88b703fb08cbea894b6aeff5a544fb92e78a18e19814cd85da83b71f772aa6c',
-  '388c684f0ba1ef5017716adb5d21a053ea8e90277d0868337519f97bede61418'
+  '388c684f0ba1ef5017716adb5d21a053ea8e90277d0868337519f97bede61418',
+  '659cbb0e2411a44db63778987b1e22153c086a95eb6b18bdf89de078917abc63',
+  '82d052c865f5763aad42add438569276c00d3d88a2d062d36b2bae914d58b8c8',
+  'aa3680d5d48a8283413f7a108367c7299ca73f553735860a87b08f39395618b7',
+  '0f62d96d6675f32685bbdb8ac13cda7c23436f63efbb9d07700d8669ff12b7c4',
+  '8d5366123cb560bb606379f90a0bfd4769eecc0557f1b362dcae9012b548b1e5'
 ];
 
 async function deployedContracts () {
 
     const instances = await Promise.all([
         storage.deployed(),
-        userManager.deployed()
+        userManager.deployed(),
+//        lending.deployed()
     ]);
     return instances;
 }
 const localNode = web3.eth.accounts[1];
-const community = web3.eth.accounts[2];
-const investor = web3.eth.accounts[3];
-const teamEH = web3.eth.accounts[4];
+const localNode_1 = web3.eth.accounts[2];
+const community = web3.eth.accounts[3];
+const investor = web3.eth.accounts[4];
+const teamEH = web3.eth.accounts[5];
 
 contract('EthicHubUser', function() {
   let instances;
@@ -86,16 +92,41 @@ contract('EthicHubUser', function() {
     let registrationStatus = await userManagerInstance.viewRegistrationStatus(investor, 'investor');
     registrationStatus.should.be.equal(true);
   });
+  it('change user status', async function() {
+    await userManagerInstance.changeUserStatus(investor, 'investor', false);
+    let registrationStatus = await userManagerInstance.viewRegistrationStatus(investor, 'investor');
+    registrationStatus.should.be.equal(false);
+    await userManagerInstance.changeUserStatus(investor, 'investor', true);
+    registrationStatus = await userManagerInstance.viewRegistrationStatus(investor, 'localNode');
+    registrationStatus.should.be.equal(false);
+    registrationStatus = await userManagerInstance.viewRegistrationStatus(investor, 'investor');
+    registrationStatus.should.be.equal(true);
+  });
+  it('change users status', async function() {
+    await userManagerInstance.changeUsersStatus([localNode, localNode_1],  'localNode', false);
+    let registrationStatus = await userManagerInstance.viewRegistrationStatus(localNode, 'localNode');
+    registrationStatus.should.be.equal(false);
+    await userManagerInstance.changeUsersStatus([localNode, localNode_1], 'localNode', true);
+    registrationStatus = await userManagerInstance.viewRegistrationStatus(localNode, 'community');
+    registrationStatus.should.be.equal(false);
+    registrationStatus = await userManagerInstance.viewRegistrationStatus(localNode_1, 'community');
+    registrationStatus.should.be.equal(false);
+    registrationStatus = await userManagerInstance.viewRegistrationStatus(localNode, 'localNode');
+    registrationStatus.should.be.equal(true);
+    registrationStatus = await userManagerInstance.viewRegistrationStatus(localNode_1, 'localNode');
+    registrationStatus.should.be.equal(true);
+  });
 });
 
 //contract('EthicHubLending', function() {
 //  let instances;
 //  let storageInstance;
-//  //let lendingInstance;
+//  let lendingInstance;
 //  before(async () => {
 //    instances = await deployedContracts();
 //    storageInstance = instances[0];
-//    lendingInstance = await lending.deployed(storageInstance.address);
+//    lendingInstance = instances[2];
+//    //lendingInstance = await lending.deployed(storageInstance.address);
 //    //web3Contract = web3.eth.contract(lendingInstance.abi).at(lendingInstance.address);
 //    //ownerLending = web3Contract._eth.coinbase;
 //  });
