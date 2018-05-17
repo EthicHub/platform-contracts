@@ -36,6 +36,12 @@ const utils = web3_1_0.utils;
 const storage = artifacts.require('./storage/EthicHubStorage.sol');
 const userManager = artifacts.require('./user/EthicHubUser.sol');
 const lending = artifacts.require('./lending/EthicHubLending.sol');
+const reputation = artifacts.require('./reputation/EthicHubReputation.sol');
+const { spawnSync } = require( 'child_process' );
+const fs = require('fs');
+
+require('dotenv').config()
+
 // Default key pairs made by testrpc when using `truffle develop` CLI tool
 // NEVER USE THESE KEYS OUTSIDE OF THE LOCAL TEST ENVIRONMENT
 const publicKeys = [
@@ -93,11 +99,21 @@ contract('EthicHubUser', function() {
     let ownerUserManager;
     let web3Contract;
     before(async () => {
-        instances = await deployedContracts();
-        storageInstance = instances[0];
-        userManagerInstance = instances[1];
-        web3Contract = web3.eth.contract(userManagerInstance.abi).at(userManagerInstance.address);
-        ownerUserManager = web3Contract._eth.coinbase;
+        // remove old .env
+        fs.unlinkSync('.env')
+
+        const truffle_migrate = spawnSync( 'truffle', [ 'migrate', '--reset' ] );
+        console.log( `stderr: ${truffle_migrate.stderr.toString()}` );
+        console.log( `stdout: ${truffle_migrate.stdout.toString()}` );
+        console.log(process.env)
+        storageInstance = storage.at(process.env.storage)
+        userManagerInstance = userManager.at(process.env.user)
+        reputationInstance = storage.at(process.env.reputation)
+        //instances = await deployedContracts();
+        //storageInstance = instances[0];
+        //userManagerInstance = instances[1];
+        //web3Contract = web3.eth.contract(userManagerInstance.abi).at(userManagerInstance.address);
+        //ownerUserManager = web3Contract._eth.coinbase;
     });
     it('should pass if contract are on storage contract', async function() {
         let userManagerContractAddress = await storageInstance.getAddress(utils.soliditySha3("contract.name", "users"));

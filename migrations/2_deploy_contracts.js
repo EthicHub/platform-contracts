@@ -1,7 +1,7 @@
 const web3_1_0 = require('web3');
 const BigNumber = web3.BigNumber
 const utils = web3_1_0.utils;
-
+const fs = require('fs');
 
 
 //const Lending = artifacts.require('Lending');
@@ -12,6 +12,10 @@ const userManager = artifacts.require('./user/EthicHubUser.sol');
 
 // Deploy EthicHub network
 module.exports = async (deployer, network) => {
+    if (network !== 'ganache' && network !== 'development') {
+        console.log("Skipping deploying EthicHub in dev networks");
+        return;
+    }
     console.log("--> Deploying EthicHubStorage...");
     return deployer.deploy(storage).then(() => {
         //Contract management
@@ -19,6 +23,7 @@ module.exports = async (deployer, network) => {
         console.log("--> Deploying EthichubCMC...");
         return deployer.deploy(cmc, storage.address).then(() => {
             console.log("--> EthichubCMC deployed");
+
             return storage.deployed().then(async storageInstance => {
                 //Give CMC access to storage
                 console.log("--> Registering EthichubCMC in the network...");
@@ -40,8 +45,10 @@ module.exports = async (deployer, network) => {
                             return cmc.deployed().then(async cmcInstance => {
                                 await cmcInstance.upgradeContract(userManager.address,"users");
                                 console.log("--> EthicHubReputation registered");
-
+                                envFileData = "cmc="+cmc.address+"\nstorage="+storage.address+"\nreputation="+reputation.address+"\nuser="+userManager.address+"\n"
+                                fs.writeFileSync(".env", envFileData)
                                 console.log("--> EthicHub network ready");
+                                 
                             });
                         });
                     });

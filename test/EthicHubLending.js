@@ -29,7 +29,6 @@ const MockReputation = artifacts.require('./helper_contracts/MockReputation.sol'
 contract('EthicHubLending', function ([owner, borrower, investor, investor2, investor3, investor4, investor5, localNode, ethicHubTeam, wallet]) {
     beforeEach(async function () {
         await advanceBlock();
-
         this.fundingStartTime = latestTime() + duration.days(1);
         this.fundingEndTime = this.fundingStartTime + duration.days(40);
         this.lendingInterestRatePercentage = 15;
@@ -45,7 +44,6 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
         this.members = 20;
         this.mockStorage = await MockStorage.new();
         this.mockReputation = await MockReputation.new();
-
         await this.mockStorage.setAddress(utils.soliditySha3("contract.name", "reputation"),this.mockReputation.address);
         this.lending = await EthicHubLending.new(
                                                 this.fundingStartTime,
@@ -106,7 +104,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.rejectedWith(EVMRevert);
         });
 
-        it.only('should allow to check investor contribution amount', async function () {
+        it('should allow to check investor contribution amount', async function () {
             await increaseTimeTo(this.fundingStartTime + duration.days(1))
             await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.fulfilled;
             const contributionAmount = await this.lending.checkInvestorContribution(investor);
@@ -316,10 +314,10 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             var defaultTime = this.lending.fundingEndTime() + duration.days(this.lendingDays) + duration.days(90);
 
             await increaseTimeTo(defaultTime);
-            // send a transaction to make this time increase to take place 
+            // send a transaction to make this time increase to take place
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.rejectedWith(EVMRevert);
             await web3.eth.sendTransaction({to: owner, value: 1, from: owner});
- 
+
             interest = parseInt((this.lendingInterestRatePercentage * 100) * (this.lendingDays) / (365)) + this.ethichubFee * 100 + this.localNodeFee * 100 ;
             borrowerReturnFiatAmount = lendingFiatAmount.mul(interest + 10000).div(100);
             borrowerReturnAmount = borrowerReturnFiatAmount.div(this.finalEthPerFiatRate);
@@ -424,8 +422,10 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
             const endTime = await this.lending.fundingEndTime()
-            const defaultTime = endTime + duration.days(this.lendingDays) + duration.days(this.defaultMaxDays);
+            const defaultTime = endTime.add(duration.days(this.lendingDays)).add(duration.days(this.defaultMaxDays));
             increaseTimeTo(defaultTime);
+            // send invalid transaction to advance time
+            await this.lending.sendTransaction({value: 1, from: borrower}).should.be.rejectedWith(EVMRevert);
             var tx = await this.lending.declareProjectDefault().should.be.fulfilled;
             var calledBurn = await this.mockReputation.burnCalled();
             calledBurn.should.be.equal(true);
@@ -589,7 +589,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
         console.log("Final balance:");
         console.log(utils.fromWei(utils.toBN(actual), 'ether'));
         console.log("Expected balance:");
-        console.log(utils.fromWei(utils.toBN(Math.floor(expected.toNumber())), 'ether'));
+        console.log(utils.fromWei(utils.toBN(expected), 'ether'));
     }
 
     function checkLostinTransactions(expected, actual) {
