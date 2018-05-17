@@ -76,6 +76,12 @@ function now() {
 
 async function deployedContracts (debug = false) {
 
+    //const instances = await Promise.all([
+    //    storage.deployed(),
+    //    userManager.deployed(storage.address)
+    //    //lending.deployed()
+    //]);
+    //return instances;
     // remove old .env
     fs.unlinkSync('.env')
 
