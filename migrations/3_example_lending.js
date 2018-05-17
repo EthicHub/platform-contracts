@@ -50,8 +50,8 @@ module.exports = async (deployer, network, accounts) => {
     return deployer.deploy(
         lending,
         //Arguments
-        now() + duration.minutes(5),//_fundingStartTime
-        now() + duration.minutes(35),//_fundingEndTime
+        now() + duration.days(5),//_fundingStartTime
+        now() + duration.days(35),//_fundingEndTime
         accounts[2],//_borrower (community)
         115,//_lendingInterestRatePercentage
         ether(3),//_totalLendingAmount
