@@ -20,8 +20,6 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
 
     event ReputationUpdated(address indexed affected, uint newValue);
 
-    event Log(uint value);
-
     /*** Modifiers ************/
 
     /// @dev Only allow access from the latest version of a contract in the Rocket Pool network after deployment
