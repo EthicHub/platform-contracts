@@ -37,10 +37,6 @@ const storage = artifacts.require('./storage/EthicHubStorage.sol');
 const userManager = artifacts.require('./user/EthicHubUser.sol');
 const lending = artifacts.require('./lending/EthicHubLending.sol');
 const reputation = artifacts.require('./reputation/EthicHubReputation.sol');
-const { spawnSync } = require( 'child_process' );
-const fs = require('fs');
-
-require('dotenv').config()
 
 // Default key pairs made by testrpc when using `truffle develop` CLI tool
 // NEVER USE THESE KEYS OUTSIDE OF THE LOCAL TEST ENVIRONMENT
@@ -76,30 +72,23 @@ function now() {
 
 async function deployedContracts (debug = false) {
 
-    //const instances = await Promise.all([
-    //    storage.deployed(),
-    //    userManager.deployed(storage.address)
-    //    //lending.deployed()
-    //]);
-    //return instances;
-    // remove old .env
-    fs.unlinkSync('.env')
+    const instances = Promise.all([
+        storage.deployed(),
+        userManager.deployed(),
+        reputation.deployed(),
+        lending.deployed()
+    ]);
+    return instances;
 
-    const truffle_migrate = spawnSync( 'node_modules/.bin/truffle', [ 'migrate', '--reset' ] );
-    if (debug){
-        console.log( `stderr: ${truffle_migrate.stderr.toString()}` );
-        console.log( `stdout: ${truffle_migrate.stdout.toString()}` );
-        console.log(process.env)
-    }
 }
 const ownerTruffle = web3.eth.accounts[0];
-const localNode1 = web3.eth.accounts[1];
-const localNode2 = web3.eth.accounts[2];
-const community = web3.eth.accounts[3];
-const investor1 = web3.eth.accounts[4];
-const investor2 = web3.eth.accounts[5];
-const investor3 = web3.eth.accounts[6];
-const teamEH = web3.eth.accounts[7];
+const localNode2 = web3.eth.accounts[1];
+const community = web3.eth.accounts[2];
+const localNode1 = web3.eth.accounts[3];
+const teamEH = web3.eth.accounts[4];
+const investor1 = web3.eth.accounts[5];
+const investor2 = web3.eth.accounts[6];
+const investor3 = web3.eth.accounts[7];
 
 contract('EthicHubUser', function() {
     let instances;
@@ -108,9 +97,9 @@ contract('EthicHubUser', function() {
     let ownerUserManager;
     let web3Contract;
     before(async () => {
-        await deployedContracts();
-        storageInstance = storage.at(process.env.storage)
-        userManagerInstance = userManager.at(process.env.user)
+        instances = await deployedContracts();
+        storageInstance = instances[0];
+        userManagerInstance = instances[1];
         web3Contract = web3.eth.contract(userManagerInstance.abi).at(userManagerInstance.address);
         ownerUserManager = web3Contract._eth.coinbase;
     });
@@ -159,67 +148,31 @@ contract('EthicHubUser', function() {
     });
 });
 
-contract('EthicHubLending', function(accounts) {
+contract('EthicHubLending', function() {
     let instances;
     let storageInstance;
     let userManagerInstance;
     let lendingInstance;
     let ownerLending;
     let web3Contract;
-    //TODO deployed() EthicHubLending
     before(async () => {
-        //await deployedContracts();
-        storageInstance = storage.at(process.env.storage)
-        userManagerInstance = userManager.at(process.env.user)
-        lendingInstance = lending.at(process.env.lending)
+        instances = await deployedContracts();
+        storageInstance = instances[0];
+        userManagerInstance = instances[1];
+        lendingInstance = instances[3];
         web3Contract = web3.eth.contract(lendingInstance.abi).at(lendingInstance.address);
         ownerLending = web3Contract._eth.coinbase;
-        console.log(ownerLending);
     });
-    //before(async () => {
-    //  instances = await deployedContracts();
-    //  storageInstance = instances[0];
-    //  lendingInstance = instances[2];
-    //  //lendingInstance = await lending.deployed(storageInstance.address);
-    //  //web3Contract = web3.eth.contract(lendingInstance.abi).at(lendingInstance.address);
-    //  //ownerLending = web3Contract._eth.coinbase;
-    //});
-    // De momento con new, no se hacerlo de otra
-    //before(async () => {
-    //    instances = await deployedContracts();
-    //    storageInstance = instances[0];
-    //    userManagerInstance = instances[1];
-    //    // Register community and localNode
-    //    await userManagerInstance.registerCommunity(community);
-    //    await userManagerInstance.registerLocalNode(localNode1);
-
-    //    // Deployed lending contract
-    //    lendingInstance = await lending.new(
-    //        //Arguments
-    //        latestTime() + duration.days(5),//_fundingStartTime
-    //        latestTime() + duration.days(35),//_fundingEndTime
-    //        ownerTruffle,//_borrower (community)
-    //        115,//_lendingInterestRatePercentage
-    //        ether(3),//_totalLendingAmount
-    //        2,//_lendingDays
-    //        storageInstance.address, //_storageAddress
-    //        localNode1,//localNode
-    //        teamEH//team
-    //    );
-    //    // Register contract on storage
-    //    await storageInstance.setAddress(utils.soliditySha3("contract.address", lendingInstance.address), lendingInstance.address);
-    //    // owner of Lending contract
-    //    web3Contract = web3.eth.contract(lendingInstance.abi).at(lendingInstance.address);
-    //    ownerLending = web3Contract._eth.coinbase;
-    //    ownerLending.should.be.equal(ownerTruffle);
-    //});
     it('should pass if contract are on storage contract', async function() {
         let lendingContractAddress = await storageInstance.getAddress(utils.soliditySha3("contract.address", lendingInstance.address));
         lendingContractAddress.should.be.equal(lendingInstance.address);
     });
     describe('The investment reaches the local node', function() {
         it('investment reaches goal', async function() {
-            await increaseTimeTo(latestTime() + duration.days(10));
+            await increaseTimeTo(latestTime() + duration.days(1));
+            // Some initial parameters
+            const initialEthPerFiatRate = 400;
+            const finalEthPerFiatRate = 480;
             const investment1 = ether(2);
             const investment2 = ether(1);
             const investment3 = ether(1.5);
@@ -227,6 +180,15 @@ contract('EthicHubLending', function(accounts) {
             const investor1InitialBalance = await web3.eth.getBalance(investor1);
             const investor2InitialBalance = await web3.eth.getBalance(investor2);
             const investor3InitialBalance = await web3.eth.getBalance(investor3);
+            const localNodeInitialBalance = await web3.eth.getBalance(localNode1);
+            const teamInitialBalance = await web3.eth.getBalance(teamEH);
+            const communityInitialBalance = await web3.eth.getBalance(community);
+            console.log('Initial Investor 1:' + utils.fromWei(utils.toBN(investor1InitialBalance)));
+            console.log('Initial Investor 2:' + utils.fromWei(utils.toBN(investor2InitialBalance)));
+            console.log('Initial Investor 3:' + utils.fromWei(utils.toBN(investor3InitialBalance)));
+            console.log('Initial Local Node:' + utils.fromWei(utils.toBN(localNodeInitialBalance)));
+            console.log('Initial Team:' + utils.fromWei(utils.toBN(teamInitialBalance)));
+            console.log('Initial Community:' + utils.fromWei(utils.toBN(communityInitialBalance)));
 
             // Register the invetors
             await userManagerInstance.registerInvestor(investor1);
@@ -237,19 +199,42 @@ contract('EthicHubLending', function(accounts) {
             var isRunning = await lendingInstance.isContribPeriodRunning();
             isRunning.should.be.equal(true);
 
+            //Raw transaction in truffle develop. CAUTION the private key is from truffle
+            //await rawTransaction(investor1, privateKeys[5], lendingInstance.address, '', investment1).should.be.fulfilled;
+            //Send transaction
+            await lendingInstance.sendTransaction({value: investment1, from: investor1}).should.be.fulfilled;
+            const contribution1 = await lendingInstance.checkInvestorContribution(investor1);
+            contribution1.should.be.bignumber.equal(ether(2));
+            await lendingInstance.sendTransaction({value: investment2, from: investor2}).should.be.fulfilled;
+            const contribution2 = await lendingInstance.checkInvestorContribution(investor2);
+            contribution2.should.be.bignumber.equal(ether(1));
+            // Goal is reached, no accepts more invesments
+            await lendingInstance.sendTransaction({value: investment3, from: investor3}).should.be.rejectedWith(EVMRevert);
+            // Finish
+            await lendingInstance.finishInitialExchangingPeriod(initialEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
+            await lendingInstance.setBorrowerReturnEthPerFiatRate(finalEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
+            //
+            await lendingInstance.returnBorrowedEth().should.be.fulfilled;
+            // Reclaims amounts
+            //await this.lending.reclaimContributionWithInterest(investor1, {from: investor1}).should.be.fulfilled;
+            //await this.lending.reclaimContributionWithInterest(investor2, {from: investor2}).should.be.fulfilled;
+            //await this.lending.reclaimLocalNodeFee().should.be.fulfilled;
+            //await this.lending.reclaimEthicHubTeamFee().should.be.fulfilled;
 
-           // //Raw transaction
-           await rawTransaction(investor1, 'bf088ed5814b00fd83558adb7127f9fcc71bb507b74d2c61b43a058a7c85b225', lendingInstance.address, '', investment1).should.be.fulfilled;
-           // //Send transaction
-           //await lendingInstance.sendTransaction({value: investment1, from: investor1}).should.be.fulfilled;
-           //await lendingInstance.sendTransaction({value: investment2, from: investor2}).should.be.fulfilled;
-           // await lendingInstance.sendTransaction({value: investment3, from: investor3}).should.be.rejectedWith(EVMRevert);
-           // // Finish Period
-           // await lendingInstance.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
-           // await lendingInstance.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
-           // // Return amount
-           // const borrowerReturnAmount = await lendingInstance.borrowerReturnAmount();
-           // console.log("borrowerReturnAmount: " + utils.fromWei(utils.toBN(borrowerReturnAmount)));
+            // Show balances
+            const investor1FinalBalance = await web3.eth.getBalance(investor1);
+            const investor2FinalBalance = await web3.eth.getBalance(investor2);
+            const investor3FinalBalance = await web3.eth.getBalance(investor3);
+            const localNodeFinalBalance = await web3.eth.getBalance(localNode1);
+            const teamFinalBalance = await web3.eth.getBalance(teamEH);
+            const communityFinalBalance = await web3.eth.getBalance(community);
+            console.log('Final Investor 1:' + utils.fromWei(utils.toBN(investor1FinalBalance)));
+            console.log('Final Investor 2:' + utils.fromWei(utils.toBN(investor2FinalBalance)));
+            console.log('Final Investor 3:' + utils.fromWei(utils.toBN(investor3FinalBalance)));
+            console.log('Final Local Node:' + utils.fromWei(utils.toBN(localNodeFinalBalance)));
+            console.log('Final Team:' + utils.fromWei(utils.toBN(teamFinalBalance)));
+            console.log('Final Community:' + utils.fromWei(utils.toBN(communityFinalBalance)));
+
         });
     });
 });
