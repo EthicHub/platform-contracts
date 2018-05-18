@@ -35,33 +35,27 @@ module.exports = async (deployer, network, accounts) => {
         console.log("Skipping example lending on dev networks");
         return;
     }
-    const instances = await Promise.all([
-        storage.deployed(),
-        userManager.deployed(),
-        cmc.deployed()
-    ]);
-    const storageInstance = instances[0];
-    const userManagerInstance = instances[1];
-    const cmcInstance = instances[2];
-    //Using accounts [0] because is the only one unlocked by truffle migrate
-    await userManagerInstance.changeUserStatus(accounts[0],"localNode",true);
 
     console.log("--> Deploying EthicHubLending...");
     return deployer.deploy(
         lending,
         //Arguments
-        now() + duration.days(5),//_fundingStartTime
+        now() + duration.days(1),//_fundingStartTime
         now() + duration.days(35),//_fundingEndTime
         accounts[2],//_borrower (community)
         115,//_lendingInterestRatePercentage
         ether(3),//_totalLendingAmount
         2,//_lendingDays
-        storageInstance.address, //_storageAddress
+        storage.address, //_storageAddress
         accounts[3],//localNode 
         accounts[4]//team 
     ).then(() => {
         return lending.deployed().then(async (lendingInstance) => {
 
+            userManagerInstance = await userManager.deployed();
+            cmcInstance = await cmc.deployed();
+            //Using accounts [0] because is the only one unlocked by truffle migrate
+            await userManagerInstance.changeUserStatus(accounts[0],"localNode",true);
             //Gives set permissions on storage
             await cmcInstance.addNewLendingContract(lendingInstance.address);
             console.log("--> EthicHubLending deployed");
@@ -71,9 +65,6 @@ module.exports = async (deployer, network, accounts) => {
                 1,
                 20
             )
-            envFileData = "lending="+lendingInstance.address
-            fs.appendFileSync(".env", envFileData)
-
             console.log("--> EthicHub network ready");
         });
     });
