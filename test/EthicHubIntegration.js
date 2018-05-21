@@ -152,6 +152,7 @@ contract('EthicHubLending', function() {
     let instances;
     let storageInstance;
     let userManagerInstance;
+    let reputationInstance;
     let lendingInstance;
     let ownerLending;
     let web3Contract;
@@ -159,6 +160,7 @@ contract('EthicHubLending', function() {
         instances = await deployedContracts();
         storageInstance = instances[0];
         userManagerInstance = instances[1];
+        reputationInstance = instances[2];
         lendingInstance = instances[3];
         web3Contract = web3.eth.contract(lendingInstance.abi).at(lendingInstance.address);
         ownerLending = web3Contract._eth.coinbase;
@@ -171,24 +173,14 @@ contract('EthicHubLending', function() {
         it('investment reaches goal', async function() {
             await increaseTimeTo(latestTime() + duration.days(1));
             // Some initial parameters
-            const initialEthPerFiatRate = 400;
-            const finalEthPerFiatRate = 480;
-            const investment1 = ether(2);
-            const investment2 = ether(1);
+            const initialEthPerFiatRate = 100;
+            const finalEthPerFiatRate = 200;
+            const investment1 = ether(0.5);
+            const investment2 = ether(0.5);
             const investment3 = ether(1.5);
 
-            const investor1InitialBalance = await web3.eth.getBalance(investor1);
-            const investor2InitialBalance = await web3.eth.getBalance(investor2);
-            const investor3InitialBalance = await web3.eth.getBalance(investor3);
-            const localNodeInitialBalance = await web3.eth.getBalance(localNode1);
-            const teamInitialBalance = await web3.eth.getBalance(teamEH);
-            const communityInitialBalance = await web3.eth.getBalance(community);
-            console.log('Initial Investor 1:' + utils.fromWei(utils.toBN(investor1InitialBalance)));
-            console.log('Initial Investor 2:' + utils.fromWei(utils.toBN(investor2InitialBalance)));
-            console.log('Initial Investor 3:' + utils.fromWei(utils.toBN(investor3InitialBalance)));
-            console.log('Initial Local Node:' + utils.fromWei(utils.toBN(localNodeInitialBalance)));
-            console.log('Initial Team:' + utils.fromWei(utils.toBN(teamInitialBalance)));
-            console.log('Initial Community:' + utils.fromWei(utils.toBN(communityInitialBalance)));
+            console.log('=== INITIAL ===');
+            await traceBalancesAllActors();
 
             // Register the invetors
             await userManagerInstance.registerInvestor(investor1);
@@ -204,17 +196,24 @@ contract('EthicHubLending', function() {
             //Send transaction
             await lendingInstance.sendTransaction({value: investment1, from: investor1}).should.be.fulfilled;
             const contribution1 = await lendingInstance.checkInvestorContribution(investor1);
-            contribution1.should.be.bignumber.equal(ether(2));
+            contribution1.should.be.bignumber.equal(ether(0.5));
             await lendingInstance.sendTransaction({value: investment2, from: investor2}).should.be.fulfilled;
             const contribution2 = await lendingInstance.checkInvestorContribution(investor2);
-            contribution2.should.be.bignumber.equal(ether(1));
+            contribution2.should.be.bignumber.equal(ether(0.5));
             // Goal is reached, no accepts more invesments
             await lendingInstance.sendTransaction({value: investment3, from: investor3}).should.be.rejectedWith(EVMRevert);
             // Finish
             await lendingInstance.finishInitialExchangingPeriod(initialEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
             await lendingInstance.setBorrowerReturnEthPerFiatRate(finalEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
-            //
-            await lendingInstance.returnBorrowedEth().should.be.fulfilled;
+            console.log('=== MIDDLE ===');
+            const borrowerReturnAmount = await lendingInstance.borrowerReturnAmount();
+            console.log('Community return amount:' + utils.fromWei(utils.toBN(borrowerReturnAmount)));
+            const borrowerReturnFiatAmount = await lendingInstance.borrowerReturnFiatAmount();
+            console.log('Community return amount:' + utils.fromWei(utils.toBN(borrowerReturnFiatAmount)));
+            await traceBalancesAllActors();
+            //Increase the days
+            //await increaseTimeTo(latestTime() + duration.days(36));
+            await lendingInstance.returnBorrowedEth({value: borrowerReturnAmount, from: community}).should.be.fulfilled;
             // Reclaims amounts
             //await this.lending.reclaimContributionWithInterest(investor1, {from: investor1}).should.be.fulfilled;
             //await this.lending.reclaimContributionWithInterest(investor2, {from: investor2}).should.be.fulfilled;
@@ -222,22 +221,34 @@ contract('EthicHubLending', function() {
             //await this.lending.reclaimEthicHubTeamFee().should.be.fulfilled;
 
             // Show balances
-            const investor1FinalBalance = await web3.eth.getBalance(investor1);
-            const investor2FinalBalance = await web3.eth.getBalance(investor2);
-            const investor3FinalBalance = await web3.eth.getBalance(investor3);
-            const localNodeFinalBalance = await web3.eth.getBalance(localNode1);
-            const teamFinalBalance = await web3.eth.getBalance(teamEH);
-            const communityFinalBalance = await web3.eth.getBalance(community);
-            console.log('Final Investor 1:' + utils.fromWei(utils.toBN(investor1FinalBalance)));
-            console.log('Final Investor 2:' + utils.fromWei(utils.toBN(investor2FinalBalance)));
-            console.log('Final Investor 3:' + utils.fromWei(utils.toBN(investor3FinalBalance)));
-            console.log('Final Local Node:' + utils.fromWei(utils.toBN(localNodeFinalBalance)));
-            console.log('Final Team:' + utils.fromWei(utils.toBN(teamFinalBalance)));
-            console.log('Final Community:' + utils.fromWei(utils.toBN(communityFinalBalance)));
+            console.log('=== FINISH ===');
+            await traceBalancesAllActors();
 
         });
     });
 });
+
+function traceBalancesAllActors() {
+    const investor1Balance = web3.eth.getBalance(investor1);
+    const investor2Balance = web3.eth.getBalance(investor2);
+    const investor3Balance = web3.eth.getBalance(investor3);
+    const localNodeBalance = web3.eth.getBalance(localNode1);
+    const teamBalance = web3.eth.getBalance(teamEH);
+    const communityBalance = web3.eth.getBalance(community);
+    console.log('Investor 1:' + utils.fromWei(utils.toBN(investor1Balance)));
+    console.log('Investor 2:' + utils.fromWei(utils.toBN(investor2Balance)));
+    console.log('Investor 3:' + utils.fromWei(utils.toBN(investor3Balance)));
+    console.log('Local Node:' + utils.fromWei(utils.toBN(localNodeBalance)));
+    console.log('Team:' + utils.fromWei(utils.toBN(teamBalance)));
+    console.log('Community:' + utils.fromWei(utils.toBN(communityBalance)));
+}
+
+function checkLostinTransactions(expected, actual) {
+    const lost = expected.sub(actual);
+    //console.log("Perdida:" + utils.fromWei(utils.toBN(Math.floor(lost.toNumber())), 'ether'));
+    // /* Should be below 0.02 eth */
+    lost.should.be.bignumber.below('20000000000000000');
+}
 /*
  * Call a smart contract function from any keyset in which the caller has the
  *     private and public keys.
