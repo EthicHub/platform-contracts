@@ -43,11 +43,11 @@ module.exports = async (deployer, network, accounts) => {
         now() + duration.days(1),//_fundingStartTime
         now() + duration.days(35),//_fundingEndTime
         accounts[2],//_borrower (community)
-        115,//_lendingInterestRatePercentage
-        ether(3),//_totalLendingAmount
+        10,//_lendingInterestRatePercentage
+        ether(1),//_totalLendingAmount
         2,//_lendingDays
         storage.address, //_storageAddress
-        accounts[3],//localNode 
+        accounts[3],//localNode
         accounts[4]//team 
     ).then(() => {
         return lending.deployed().then(async (lendingInstance) => {
