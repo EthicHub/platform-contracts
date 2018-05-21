@@ -195,7 +195,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
     function reclaimContributionWithInterest(address beneficiary) external {
         require(state == LendingState.ContributionReturned);
-        uint256 contribution = investors[beneficiary].amount.mul(initialEthPerFiatRate).mul(investorInterest()).div(borrowerReturnEthPerFiatRate).div(interestBaseUint);
+        uint256 contribution = investors[beneficiary].amount.mul(initialEthPerFiatRate).mul(investorInterest()).div(borrowerReturnEthPerFiatRate).div(interestBasePercent);
         require(contribution > 0);
         require(!investors[beneficiary].isCompensated);
         investors[beneficiary].isCompensated = true;
@@ -321,12 +321,10 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         return annualInterest.mul(interestBaseUint).mul(lendingDays.add(getDefaultDays(now))).div(365).add(interestBasePercent);
     }
 
-    // lendingInterestRate with 2 decimal
     function borrowerReturnFiatAmount() public view returns(uint256){
-        return totalLendingFiatAmount.mul(lendingInterestRatePercentage()).div(interestBaseUint);
+        return totalLendingFiatAmount.mul(lendingInterestRatePercentage()).div(interestBasePercent);
     }
 
-    // lendingInterestRate with 2 decimal
     function borrowerReturnAmount() public view returns(uint256){
         return borrowerReturnFiatAmount().div(borrowerReturnEthPerFiatRate);
     }

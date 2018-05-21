@@ -61,7 +61,7 @@ module.exports = async (deployer, network, accounts) => {
             console.log("--> EthicHubLending deployed");
             //Lending saves parameters in storage, checks if owner is localNode
             await lendingInstance.saveInitialParametersToStorage(
-                90,
+                2,
                 1,
                 20
             )

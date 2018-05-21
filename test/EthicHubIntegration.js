@@ -207,9 +207,9 @@ contract('EthicHubLending', function() {
             await lendingInstance.setBorrowerReturnEthPerFiatRate(finalEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
             console.log('=== MIDDLE ===');
             const borrowerReturnAmount = await lendingInstance.borrowerReturnAmount();
-            console.log('Community return amount:' + utils.fromWei(utils.toBN(borrowerReturnAmount)));
+            console.log('Community return amount:' + utils.toBN(borrowerReturnAmount));
             const borrowerReturnFiatAmount = await lendingInstance.borrowerReturnFiatAmount();
-            console.log('Community return amount:' + utils.fromWei(utils.toBN(borrowerReturnFiatAmount)));
+            console.log('Community return amount:' + utils.toBN(borrowerReturnFiatAmount));
             await traceBalancesAllActors();
             //Increase the days
             //await increaseTimeTo(latestTime() + duration.days(36));

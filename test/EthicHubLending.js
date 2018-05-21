@@ -251,7 +251,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
           contractTotalLendingFiatAmount.should.be.bignumber.equal(lendingFiatAmount);
           const contractBorrowerReturnFiatAmount = await this.lending.borrowerReturnFiatAmount();
           const interest = parseInt((this.lendingInterestRatePercentage * 100) * (this.lendingDays) / (365)) + this.ethichubFee * 100 + this.localNodeFee * 100 ;
-          const borrowerReturnFiatAmount = lendingFiatAmount.mul(interest + 10000).div(100) ;
+          const borrowerReturnFiatAmount = lendingFiatAmount.mul(interest + 10000).div(10000) ;
           contractBorrowerReturnFiatAmount.should.be.bignumber.equal(borrowerReturnFiatAmount);
 
       });
@@ -287,7 +287,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             borrowerReturnEthPerFiatRate.should.be.bignumber.equal(new BigNumber(this.finalEthPerFiatRate));
             const lendingFiatAmount = new BigNumber(this.initialEthPerFiatRate).mul(this.totalLendingAmount);
             const interest = parseInt((this.lendingInterestRatePercentage * 100) * (this.lendingDays) / (365)) + this.ethichubFee * 100 + this.localNodeFee * 100 ;
-            const borrowerReturnFiatAmount = lendingFiatAmount.mul(interest + 10000).div(100);
+            const borrowerReturnFiatAmount = lendingFiatAmount.mul(interest + 10000).div(10000);
             const borrowerReturnAmount = borrowerReturnFiatAmount.div(this.finalEthPerFiatRate);
             const contractBorrowerReturnAmount = await this.lending.borrowerReturnAmount();
             contractBorrowerReturnAmount.should.be.bignumber.equal(borrowerReturnAmount);
@@ -306,7 +306,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             const lendingFiatAmount = new BigNumber(this.initialEthPerFiatRate).mul(this.totalLendingAmount);
 
             var interest = parseInt((this.lendingInterestRatePercentage * 100) * (this.lendingDays) / (365)) + this.ethichubFee * 100 + this.localNodeFee * 100 ;
-            var borrowerReturnFiatAmount = lendingFiatAmount.mul(interest + 10000).div(100);
+            var borrowerReturnFiatAmount = lendingFiatAmount.mul(interest + 10000).div(10000);
             var borrowerReturnAmount = borrowerReturnFiatAmount.div(this.finalEthPerFiatRate);
             var contractBorrowerReturnAmount = await this.lending.borrowerReturnAmount();
             contractBorrowerReturnAmount.should.be.bignumber.equal(borrowerReturnAmount);
@@ -319,7 +319,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await web3.eth.sendTransaction({to: owner, value: 1, from: owner});
 
             interest = parseInt((this.lendingInterestRatePercentage * 100) * (this.lendingDays) / (365)) + this.ethichubFee * 100 + this.localNodeFee * 100 ;
-            borrowerReturnFiatAmount = lendingFiatAmount.mul(interest + 10000).div(100);
+            borrowerReturnFiatAmount = lendingFiatAmount.mul(interest + 10000).div(10000);
             borrowerReturnAmount = borrowerReturnFiatAmount.div(this.finalEthPerFiatRate);
             contractBorrowerReturnAmount = await this.lending.borrowerReturnAmount();
             contractBorrowerReturnAmount.should.be.bignumber.equal(borrowerReturnAmount);
@@ -466,8 +466,8 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
 
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
             await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
             //console.log("borrowerReturnAmount: " + utils.fromWei(utils.toBN(borrowerReturnAmount)));
+            const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
             await this.lending.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
             await this.lending.reclaimContributionWithInterest(investor2, {from: investor2});
             await this.lending.reclaimContributionWithInterest(investor3, {from: investor3});
@@ -575,8 +575,8 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
     function getExpectedInvestorBalance(initialAmount,contribution,testEnv) {
 
         const received = contribution.mul(testEnv.initialEthPerFiatRate)
-                            .mul(testEnv.lendingInterestRatePercentage + 100)
-                            .div(testEnv.finalEthPerFiatRate).div(100);
+                            .mul(testEnv.lendingInterestRatePercentage)
+                            .div(testEnv.finalEthPerFiatRate).div(10000);
         return initialAmount.sub(contribution).add(received);
 
     }
