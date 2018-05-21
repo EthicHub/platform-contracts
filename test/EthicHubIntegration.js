@@ -215,10 +215,10 @@ contract('EthicHubLending', function() {
             //await increaseTimeTo(latestTime() + duration.days(36));
             await lendingInstance.returnBorrowedEth({value: borrowerReturnAmount, from: community}).should.be.fulfilled;
             // Reclaims amounts
-            //await this.lending.reclaimContributionWithInterest(investor1, {from: investor1}).should.be.fulfilled;
-            //await this.lending.reclaimContributionWithInterest(investor2, {from: investor2}).should.be.fulfilled;
-            //await this.lending.reclaimLocalNodeFee().should.be.fulfilled;
-            //await this.lending.reclaimEthicHubTeamFee().should.be.fulfilled;
+            await lendingInstance.reclaimContributionWithInterest(investor1, {from: investor1}).should.be.fulfilled;
+            await lendingInstance.reclaimContributionWithInterest(investor2, {from: investor2}).should.be.fulfilled;
+            await lendingInstance.reclaimLocalNodeFee().should.be.fulfilled;
+            await lendingInstance.reclaimEthicHubTeamFee().should.be.fulfilled;
 
             // Show balances
             console.log('=== FINISH ===');
