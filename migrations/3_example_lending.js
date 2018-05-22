@@ -43,12 +43,12 @@ module.exports = async (deployer, network, accounts) => {
         now() + duration.days(1),//_fundingStartTime
         now() + duration.days(35),//_fundingEndTime
         accounts[2],//_borrower (community)
-        10,//_lendingInterestRatePercentage
+        10,//_annualInterest
         ether(1),//_totalLendingAmount
         2,//_lendingDays
         storage.address, //_storageAddress
         accounts[3],//localNode
-        accounts[4]//team 
+        accounts[4]//team
     ).then(() => {
         return lending.deployed().then(async (lendingInstance) => {
 
@@ -61,9 +61,9 @@ module.exports = async (deployer, network, accounts) => {
             console.log("--> EthicHubLending deployed");
             //Lending saves parameters in storage, checks if owner is localNode
             await lendingInstance.saveInitialParametersToStorage(
-                2,
-                1,
-                20
+                2,//maxDefaultDays
+                1,//tier
+                20//community members
             )
             console.log("--> EthicHub network ready");
         });
