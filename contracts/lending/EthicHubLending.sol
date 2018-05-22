@@ -226,7 +226,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         if (surplusEth > 0){
             investorAmount  = investors[beneficiary].amount.mul(totalLendingAmount.sub(surplusEth)).div(totalLendingAmount);
         }
-        uint256 contribution = investors[beneficiary].amount.mul(initialEthPerFiatRate).mul(investorInterest()).div(borrowerReturnEthPerFiatRate).div(interestBasePercent);
+        uint256 contribution = investorAmount.mul(initialEthPerFiatRate).mul(investorInterest()).div(borrowerReturnEthPerFiatRate).div(interestBasePercent);
         require(contribution > 0);
         require(!investors[beneficiary].isCompensated);
         investors[beneficiary].isCompensated = true;
