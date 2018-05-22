@@ -19,15 +19,13 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         ContributionReturned,
         Default
     }
-
     mapping(address => Investor) public investors;
+    uint256 public investorCount;
     uint256 public fundingStartTime;                                     // Start time of contribution period in UNIX time
     uint256 public fundingEndTime;                                       // End time of contribution period in UNIX time
     uint256 public totalContributed;
     bool public capReached;
     LendingState public state;
-    address[] public investorsKeys;
-
     uint256 public annualInterest;
     uint256 public totalLendingAmount;
     uint256 public lendingDays;
@@ -44,8 +42,8 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     // interest rate is using base uint 100 and 100% 10000, this means 1% is 100
     // this guarantee we can have a 2 decimal presicion in our calculation
     uint256 public constant interestBaseUint = 100;
-    uint256 public constant interestBasePercent = 10000; 
-    bool public localNodeFeeReclaimed; 
+    uint256 public constant interestBasePercent = 10000;
+    bool public localNodeFeeReclaimed;
     bool public ethicHubTeamFeeReclaimed;
     EthicHubReputationInterface reputation = EthicHubReputationInterface(0);
     uint256 public surplusEth;
@@ -100,7 +98,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         borrower = _borrower;
         // 15 * (lending days)/ 365 + 4% local node fee + EthicHub fee
         annualInterest = _annualInterest;
-        
+
         require(_totalLendingAmount > 0);
         totalLendingAmount = _totalLendingAmount;
         //90 days for version 0.1
@@ -177,7 +175,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         emit onReturnRateSet(borrowerReturnEthPerFiatRate);
 
     }
-    
+
     function finishInitialExchangingPeriod(uint256 _initialEthPerFiatRate) external onlyOwner {
         require(capReached == true);
         require(state == LendingState.ExchangingToFiat);
@@ -294,17 +292,15 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
             sendFundsToBorrower();
         }
-
         if (investors[contributor].amount == 0) {
-            investorsKeys.push(contributor);
+            investorCount = investorCount.add(1);
         }
-
         investors[contributor].amount = investors[contributor].amount.add(contribValue);
 
         if (excessContribValue > 0) {
             msg.sender.transfer(excessContribValue);
         }
-        emit onContribution(newTotalContributed, contributor, contribValue, investorsKeys.length);
+        emit onContribution(newTotalContributed, contributor, contribValue, investorCount);
     }
 
 
