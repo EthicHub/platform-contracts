@@ -6,4 +6,6 @@ contract EthicHubReputationInterface {
     function incrementReputation() external;
     function initLocalNodeReputation(address localNode) onlyUsersContract external;
     function initCommunityReputation(address community) onlyUsersContract external;
+    function getCommunityReputation(address target) public view returns(uint256);
+    function getLocalNodeReputation(address target) public view returns(uint256);
 }

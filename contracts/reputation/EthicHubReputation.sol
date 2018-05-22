@@ -131,16 +131,22 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
         }
     }
 
-
     function initLocalNodeReputation(address localNode) onlyUsersContract external {
         require(ethicHubStorage.getUint(keccak256("localNode.reputation", localNode)) == 0);
         ethicHubStorage.setUint(keccak256("localNode.reputation", localNode), initReputation);
     }
 
-
     function initCommunityReputation(address community) onlyUsersContract external {
         require(ethicHubStorage.getUint(keccak256("comunity.reputation", community)) == 0);
         ethicHubStorage.setUint(keccak256("community.reputation", community), initReputation);
+    }
+
+    function getCommunityReputation(address target) public view returns(uint256) {
+        return ethicHubStorage.getUint(keccak256("community.reputation", target));
+    }
+
+    function getLocalNodeReputation(address target) public view returns(uint256) {
+        return ethicHubStorage.getUint(keccak256("localNode.reputation", target));
     }
 
 }
