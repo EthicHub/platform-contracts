@@ -1,9 +1,9 @@
 const web3_1_0 = require('web3');
 const BigNumber = web3.BigNumber
 const utils = web3_1_0.utils;
+const fs = require('fs');
 
-
-const cmc = artifacts.require('./EthichubCMC.sol');
+const cmc = artifacts.require('./EthicHubCMC.sol');
 const userManager = artifacts.require('./user/EthicHubUser.sol');
 const lending = artifacts.require('./lending/EthicHubLending.sol');
 const storage = artifacts.require('./storage/EthicHubStorage.sol');
@@ -31,43 +31,41 @@ function now() {
 
 module.exports = async (deployer, network, accounts) => {
 
-    if (network === 'ganache' || network === 'development') {
+    if (network !== 'ganache' && network !== 'development' && network !== 'develop') {
         console.log("Skipping example lending on dev networks");
         return;
     }
-    const instances = await Promise.all([
-        storage.deployed(),
-        userManager.deployed(),
-        cmc.deployed()
-    ]);
-    const storageInstance = instances[0];
-    const userManagerInstance = instances[1];
-    const cmcInstance = instances[2];
-    //Using accounts [0] because is the only one unlocked by truffle migrate
-    await userManagerInstance.changeUserStatus(accounts[0],"localNode",true);
 
+    console.log("--> Deploying EthicHubLending...");
     return deployer.deploy(
         lending,
         //Arguments
-        now() + duration.minutes(5),//_fundingStartTime
-        now() + duration.minutes(35),//_fundingEndTime
+        now() + duration.days(1),//_fundingStartTime
+        now() + duration.days(35),//_fundingEndTime
         accounts[2],//_borrower (community)
-        115,//_lendingInterestRatePercentage
-        ether(3),//_totalLendingAmount
+        10,//_lendingInterestRatePercentage
+        ether(1),//_totalLendingAmount
         2,//_lendingDays
-        storageInstance.address, //_storageAddress
+        storage.address, //_storageAddress
         accounts[3],//localNode
-        accounts[4]//team
+        accounts[4]//team 
     ).then(() => {
         return lending.deployed().then(async (lendingInstance) => {
+
+            userManagerInstance = await userManager.deployed();
+            cmcInstance = await cmc.deployed();
+            //Using accounts [0] because is the only one unlocked by truffle migrate
+            await userManagerInstance.changeUserStatus(accounts[0],"localNode",true);
             //Gives set permissions on storage
             await cmcInstance.addNewLendingContract(lendingInstance.address);
+            console.log("--> EthicHubLending deployed");
             //Lending saves parameters in storage, checks if owner is localNode
             await lendingInstance.saveInitialParametersToStorage(
-                90,
+                2,
                 1,
                 20
             )
+            console.log("--> EthicHub network ready");
         });
     });
 };

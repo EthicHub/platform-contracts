@@ -1,4 +1,3 @@
-.env
 .DS_Store
 .swo
 # Logs
@@ -60,7 +59,14 @@ typings/
 # dotenv environment variables file
 .env
 
+# virtualenv for node
+.node_env
+
+# vim swap files
 *.swp
+*.swo
 
 package-lock.json
 build/
+
+
