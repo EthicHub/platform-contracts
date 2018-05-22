@@ -174,7 +174,7 @@ contract('EthicHubLending', function() {
             await increaseTimeTo(latestTime() + duration.days(1));
             // Some initial parameters
             const initialEthPerFiatRate = 100;
-            const finalEthPerFiatRate = 200;
+            const finalEthPerFiatRate = 100;
             const investment1 = ether(0.5);
             const investment2 = ether(0.5);
             const investment3 = ether(1.5);
@@ -194,10 +194,12 @@ contract('EthicHubLending', function() {
             //Raw transaction in truffle develop. CAUTION the private key is from truffle
             //await rawTransaction(investor1, privateKeys[5], lendingInstance.address, '', investment1).should.be.fulfilled;
             //Send transaction
-            await lendingInstance.sendTransaction({value: investment1, from: investor1}).should.be.fulfilled;
+            let tx1 = await lendingInstance.sendTransaction({value: investment1, from: investor1}).should.be.fulfilled;
+            getTransactionCost(tx1.tx);
             const contribution1 = await lendingInstance.checkInvestorContribution(investor1);
             contribution1.should.be.bignumber.equal(ether(0.5));
-            await lendingInstance.sendTransaction({value: investment2, from: investor2}).should.be.fulfilled;
+            let tx2 = await lendingInstance.sendTransaction({value: investment2, from: investor2}).should.be.fulfilled;
+            getTransactionCost(tx2.tx);
             const contribution2 = await lendingInstance.checkInvestorContribution(investor2);
             contribution2.should.be.bignumber.equal(ether(0.5));
             // Goal is reached, no accepts more invesments
@@ -206,17 +208,19 @@ contract('EthicHubLending', function() {
             await lendingInstance.finishInitialExchangingPeriod(initialEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
             await lendingInstance.setBorrowerReturnEthPerFiatRate(finalEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
             console.log('=== MIDDLE ===');
-            const borrowerReturnAmount = await lendingInstance.borrowerReturnAmount();
-            console.log('Community return amount:' + utils.toBN(borrowerReturnAmount));
-            const borrowerReturnFiatAmount = await lendingInstance.borrowerReturnFiatAmount();
-            console.log('Community return amount:' + utils.toBN(borrowerReturnFiatAmount));
             await traceBalancesAllActors();
+            const borrowerReturnAmount = await lendingInstance.borrowerReturnAmount();
+            console.log('Community return amount (ETH):' + utils.fromWei(utils.toBN(borrowerReturnAmount)));
+            const borrowerReturnFiatAmount = await lendingInstance.borrowerReturnFiatAmount();
+            console.log('Community return amount (pesos):' + utils.fromWei(utils.toBN(borrowerReturnFiatAmount)));
             //Increase the days
             //await increaseTimeTo(latestTime() + duration.days(36));
             await lendingInstance.returnBorrowedEth({value: borrowerReturnAmount, from: community}).should.be.fulfilled;
             // Reclaims amounts
-            await lendingInstance.reclaimContributionWithInterest(investor1, {from: investor1}).should.be.fulfilled;
-            await lendingInstance.reclaimContributionWithInterest(investor2, {from: investor2}).should.be.fulfilled;
+            tx1 = await lendingInstance.reclaimContributionWithInterest(investor1, {from: investor1}).should.be.fulfilled;
+            getTransactionCost(tx1.tx);
+            tx2 = await lendingInstance.reclaimContributionWithInterest(investor2, {from: investor2}).should.be.fulfilled;
+            getTransactionCost(tx2.tx);
             await lendingInstance.reclaimLocalNodeFee().should.be.fulfilled;
             await lendingInstance.reclaimEthicHubTeamFee().should.be.fulfilled;
 
@@ -229,18 +233,20 @@ contract('EthicHubLending', function() {
 });
 
 function traceBalancesAllActors() {
-    const investor1Balance = web3.eth.getBalance(investor1);
-    const investor2Balance = web3.eth.getBalance(investor2);
-    const investor3Balance = web3.eth.getBalance(investor3);
-    const localNodeBalance = web3.eth.getBalance(localNode1);
-    const teamBalance = web3.eth.getBalance(teamEH);
-    const communityBalance = web3.eth.getBalance(community);
-    console.log('Investor 1:' + utils.fromWei(utils.toBN(investor1Balance)));
-    console.log('Investor 2:' + utils.fromWei(utils.toBN(investor2Balance)));
-    console.log('Investor 3:' + utils.fromWei(utils.toBN(investor3Balance)));
-    console.log('Local Node:' + utils.fromWei(utils.toBN(localNodeBalance)));
-    console.log('Team:' + utils.fromWei(utils.toBN(teamBalance)));
-    console.log('Community:' + utils.fromWei(utils.toBN(communityBalance)));
+    const ownerLendingBalance = utils.fromWei(utils.toBN(web3.eth.getBalance(ownerTruffle)));
+    const investor1Balance = utils.fromWei(utils.toBN(web3.eth.getBalance(investor1)));
+    const investor2Balance = utils.fromWei(utils.toBN(web3.eth.getBalance(investor2)));
+    const investor3Balance = utils.fromWei(utils.toBN(web3.eth.getBalance(investor3)));
+    const localNodeBalance = utils.fromWei(utils.toBN(web3.eth.getBalance(localNode1)));
+    const teamBalance = utils.fromWei(utils.toBN(web3.eth.getBalance(teamEH)));
+    const communityBalance = utils.fromWei(utils.toBN(web3.eth.getBalance(community)));
+    console.log('Owner Contract:' + ownerLendingBalance);
+    console.log('Investor 1:' + investor1Balance);
+    console.log('Investor 2:' + investor2Balance);
+    console.log('Investor 3:' + investor3Balance);
+    console.log('Local Node:' + localNodeBalance);
+    console.log('Team:' + teamBalance);
+    console.log('Community:' + communityBalance);
 }
 
 function checkLostinTransactions(expected, actual) {
@@ -248,6 +254,17 @@ function checkLostinTransactions(expected, actual) {
     //console.log("Perdida:" + utils.fromWei(utils.toBN(Math.floor(lost.toNumber())), 'ether'));
     // /* Should be below 0.02 eth */
     lost.should.be.bignumber.below('20000000000000000');
+}
+
+// Calculate (gasUsed*gasPrice)
+function getTransactionCost(txHash) {
+    const gasPrice = web3.eth.getTransaction(txHash).gasPrice;
+    const gasUsed = web3.eth.getTransactionReceipt(txHash).gasUsed;
+    const txCost = gasPrice.mul(gasUsed);
+    console.log('Gas Price:' + utils.fromWei(utils.toBN(gasPrice)));
+    console.log('Gas Used:' + gasUsed.toString());
+    console.log('Tx Cost:' + utils.fromWei(utils.toBN(txCost)));
+    return txCost;
 }
 /*
  * Call a smart contract function from any keyset in which the caller has the
