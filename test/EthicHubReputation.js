@@ -189,13 +189,13 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             await this.reputation.burnReputation({from: lendingContract}).should.be.fulfilled;
 
             //Community rep
-            const rep = await this.mockStorage.getUint(utils.soliditySha3("community.reputation", community)).should.be.fulfilled;
+            const rep = await this.reputation.getCommunityReputation(community).should.be.fulfilled;
             var expectedRep = initialCommunityReputation.sub(initialCommunityReputation.mul(defaultDays).div(this.maxDefaultDays)).toNumber();
             expectedRep = Math.floor(expectedRep);
             rep.should.be.bignumber.equal(expectedRep);
 
             //Local Node rep
-            var newRep = await this.mockStorage.getUint(utils.soliditySha3("localNode.reputation", localNode)).should.be.fulfilled;
+            var newRep = await this.reputation.getLocalNodeReputation(localNode).should.be.fulfilled;
             var decrement = initialLocalNodeReputation.mul(defaultDays).div(this.maxDefaultDays);
             var expectedRep = initialLocalNodeReputation.sub(decrement).toNumber();
             expectedRep = Math.floor(expectedRep);
@@ -280,13 +280,13 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             await this.reputation.incrementReputation({from: lendingContract}).should.be.fulfilled;
 
             //Community rep
-            var rep = await this.mockStorage.getUint(utils.soliditySha3("community.reputation", community)).should.be.fulfilled;
+            var rep = await this.reputation.getCommunityReputation(community).should.be.fulfilled;
             var increment = new BigNumber(100).div(previouslyCompletedProjects);
             var expectedRep = Math.floor(initialCommunityReputation.add(increment).toNumber());
             rep.should.be.bignumber.equal(expectedRep);
 
             //Local Node rep
-            var newLocalRep = await this.mockStorage.getUint(utils.soliditySha3("localNode.reputation", localNode)).should.be.fulfilled;
+            var newLocalRep = await this.reputation.getLocalNodeReputation(localNode).should.be.fulfilled;
             increment = (new BigNumber(projectTier).mul(this.minimumPeopleCommunity).div(this.minimumProject)).mul(this.incrLocalNodeMultiplier);//.div(1000);
             expectedRep = initialLocalNodeReputation.add(increment);
             //console.log("Expected Rep: "+expectedRep);
@@ -371,7 +371,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             await this.mockStorage.setAddress(utils.soliditySha3("contract.name", "users"), owner);
             await this.reputation.initLocalNodeReputation(localNode).should.be.fulfilled;
             const default_rep = await this.reputation.initReputation();
-            var rep = await this.mockStorage.getUint(utils.soliditySha3("localNode.reputation", localNode)).should.be.fulfilled;
+            var rep = await this.reputation.getLocalNodeReputation(localNode).should.be.fulfilled;
             default_rep.should.be.bignumber.equal(rep);
         });
 
@@ -380,7 +380,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             await this.mockStorage.setAddress(utils.soliditySha3("contract.name", "users"), owner);
             await this.reputation.initCommunityReputation(community).should.be.fulfilled;
             const default_rep = await this.reputation.initReputation();
-            const rep = await this.mockStorage.getUint(utils.soliditySha3("community.reputation", community)).should.be.fulfilled;
+            const rep = await this.reputation.getCommunityReputation(community).should.be.fulfilled;
             default_rep.should.be.bignumber.equal(rep);
         });
 
