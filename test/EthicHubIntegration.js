@@ -33,6 +33,7 @@ const should = require('chai')
     .should()
 const web3_1_0 = require('web3');
 const utils = web3_1_0.utils;
+const fs = require('fs');
 const storage = artifacts.require('./storage/EthicHubStorage.sol');
 const userManager = artifacts.require('./user/EthicHubUser.sol');
 const lending = artifacts.require('./lending/EthicHubLending.sol');
@@ -171,6 +172,7 @@ contract('EthicHubLending', function() {
     });
     describe('The investment reaches the local node', function() {
         it('investment reaches goal', async function() {
+
             await increaseTimeTo(latestTime() + duration.days(1));
             // Some initial parameters
             const initialEthPerFiatRate = 100;
@@ -178,14 +180,19 @@ contract('EthicHubLending', function() {
             const investment1 = ether(0.5);
             const investment2 = ether(0.5);
             const investment3 = ether(1.5);
+            let transaction;
 
-            console.log('=== INITIAL ===');
-            await traceBalancesAllActors();
+            // Show balances
+            //console.log('=== INITIAL ===');
+            //await traceBalancesAllActors();
 
             // Register the invetors
-            await userManagerInstance.registerInvestor(investor1);
-            await userManagerInstance.registerInvestor(investor2);
-            await userManagerInstance.registerInvestor(investor3);
+            transaction = await userManagerInstance.registerInvestor(investor1);
+            reportMethodGasUsed('report', 'ownerUserManager', 'userManagerInstance.registerInvestor(investor1)', transaction.tx, true);
+            transaction = await userManagerInstance.registerInvestor(investor2);
+            reportMethodGasUsed('report', 'ownerUserManager', 'userManagerInstance.registerInvestor(investor2)', transaction.tx);
+            transaction = await userManagerInstance.registerInvestor(investor3);
+            reportMethodGasUsed('report', 'ownerUserManager', 'userManagerInstance.registerInvestor(investor3)', transaction.tx);
 
             // Is contribution period
             var isRunning = await lendingInstance.isContribPeriodRunning();
@@ -194,39 +201,46 @@ contract('EthicHubLending', function() {
             //Raw transaction in truffle develop. CAUTION the private key is from truffle
             //await rawTransaction(investor1, privateKeys[5], lendingInstance.address, '', investment1).should.be.fulfilled;
             //Send transaction
-            let tx1 = await lendingInstance.sendTransaction({value: investment1, from: investor1}).should.be.fulfilled;
-            getTransactionCost(tx1.tx);
+            transaction = await lendingInstance.sendTransaction({value: investment1, from: investor1}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'investor1', 'lendingInstance.sendTransaction', transaction.tx);
             const contribution1 = await lendingInstance.checkInvestorContribution(investor1);
-            contribution1.should.be.bignumber.equal(ether(0.5));
-            let tx2 = await lendingInstance.sendTransaction({value: investment2, from: investor2}).should.be.fulfilled;
-            getTransactionCost(tx2.tx);
+            contribution1.should.be.bignumber.equal(investment1);
+            transaction = await lendingInstance.sendTransaction({value: investment2, from: investor2}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'investor2', 'lendingInstance.sendTransaction', transaction.tx);
             const contribution2 = await lendingInstance.checkInvestorContribution(investor2);
-            contribution2.should.be.bignumber.equal(ether(0.5));
+            contribution2.should.be.bignumber.equal(investment2);
             // Goal is reached, no accepts more invesments
             await lendingInstance.sendTransaction({value: investment3, from: investor3}).should.be.rejectedWith(EVMRevert);
+            //reportMethodGasUsed('report', 'investor3', 'lendingInstance.sendTransaction', transaction.tx);
             // Finish
-            await lendingInstance.finishInitialExchangingPeriod(initialEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
-            await lendingInstance.setBorrowerReturnEthPerFiatRate(finalEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
-            console.log('=== MIDDLE ===');
-            await traceBalancesAllActors();
+            transaction = await lendingInstance.finishInitialExchangingPeriod(initialEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.finishInitialExchangingPeriod', transaction.tx);
+            transaction = await lendingInstance.setBorrowerReturnEthPerFiatRate(finalEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.setBorrowerReturnEthPerFiatRate', transaction.tx);
+            // Show balances
+            //console.log('=== MIDDLE ===');
+            //await traceBalancesAllActors();
             const borrowerReturnAmount = await lendingInstance.borrowerReturnAmount();
-            console.log('Community return amount (ETH):' + utils.fromWei(utils.toBN(borrowerReturnAmount)));
+            //console.log('Community return amount (ETH):' + utils.fromWei(utils.toBN(borrowerReturnAmount)));
             const borrowerReturnFiatAmount = await lendingInstance.borrowerReturnFiatAmount();
-            console.log('Community return amount (pesos):' + utils.fromWei(utils.toBN(borrowerReturnFiatAmount)));
+            //console.log('Community return amount (pesos):' + utils.fromWei(utils.toBN(borrowerReturnFiatAmount)));
             //Increase the days
             //await increaseTimeTo(latestTime() + duration.days(36));
-            await lendingInstance.returnBorrowedEth({value: borrowerReturnAmount, from: community}).should.be.fulfilled;
+            transaction = await lendingInstance.returnBorrowedEth({value: borrowerReturnAmount, from: community}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'community', 'lendingInstance.returnBorrowedEth', transaction.tx);
             // Reclaims amounts
-            tx1 = await lendingInstance.reclaimContributionWithInterest(investor1, {from: investor1}).should.be.fulfilled;
-            getTransactionCost(tx1.tx);
-            tx2 = await lendingInstance.reclaimContributionWithInterest(investor2, {from: investor2}).should.be.fulfilled;
-            getTransactionCost(tx2.tx);
-            await lendingInstance.reclaimLocalNodeFee().should.be.fulfilled;
-            await lendingInstance.reclaimEthicHubTeamFee().should.be.fulfilled;
+            transaction = await lendingInstance.reclaimContributionWithInterest(investor1, {from: investor1}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'investor1', 'lendingInstance.reclaimContributionWithInterest', transaction.tx);
+            transaction = await lendingInstance.reclaimContributionWithInterest(investor2, {from: investor2}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'investor2', 'lendingInstance.reclaimContributionWithInterest', transaction.tx);
+            transaction = await lendingInstance.reclaimLocalNodeFee().should.be.fulfilled;
+            reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.reclaimLocalNodeFee', transaction.tx);
+            transaction = await lendingInstance.reclaimEthicHubTeamFee().should.be.fulfilled;
+            reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.reclaimEthicHubTeamFee', transaction.tx);
 
             // Show balances
-            console.log('=== FINISH ===');
-            await traceBalancesAllActors();
+            //console.log('=== FINISH ===');
+            //await traceBalancesAllActors();
 
         });
     });
@@ -265,6 +279,13 @@ function getTransactionCost(txHash) {
     console.log('Gas Used:' + gasUsed.toString());
     console.log('Tx Cost:' + utils.fromWei(utils.toBN(txCost)));
     return txCost;
+}
+
+function reportMethodGasUsed (filename, role, methodName, txHash, remove = false) {
+    if (remove)
+        fs.unlinkSync(filename + '.csv');
+    const gasUsed = web3.eth.getTransactionReceipt(txHash).gasUsed;
+    fs.appendFileSync(filename + '.csv', role + ',' + methodName + ',' + gasUsed + '\n');
 }
 /*
  * Call a smart contract function from any keyset in which the caller has the
