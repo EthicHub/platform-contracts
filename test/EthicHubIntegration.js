@@ -172,7 +172,7 @@ contract('EthicHubLending', function() {
         let lendingContractAddress = await storageInstance.getAddress(utils.soliditySha3("contract.address", lendingInstance.address));
         lendingContractAddress.should.be.equal(lendingInstance.address);
     });
-    describe('The investment reaches the local node', function() {
+    describe('The investment flow', function() {
         it('investment reaches goal', async function() {
 
             await increaseTimeTo(latestTime() + duration.days(1));
@@ -182,11 +182,39 @@ contract('EthicHubLending', function() {
             const investment1 = ether(0.5);
             const investment2 = ether(0.5);
             const investment3 = ether(1.5);
+            const defaultDays = 1;
             let transaction;
+            let localNodeRep;
+            let communityRep;
+            let maxDefaultDays;
+            let initialCommunityReputation;
+            let initialLocalNodeReputation;
 
             // Show balances
             //console.log('=== INITIAL ===');
             //await traceBalancesAllActors();
+
+            // Calculate reputation
+            maxDefaultDays = await storageInstance.getUint(utils.soliditySha3("lending.maxDefaultDays", lendingInstance));
+            console.log('Max Default Days: ' + maxDefaultDays);
+            //Community rep
+            communityRep = await reputationInstance.getCommunityReputation(community).should.be.fulfilled;
+            initialCommunityReputation = await storageInstance.getUint(utils.soliditySha3("community.reputation", community));
+            console.log('Initial Community Reputation: '+ initialCommunityReputation);
+            var expectedRep = initialCommunityReputation.sub(initialCommunityReputation.mul(defaultDays).div(maxDefaultDays)).toNumber();
+            expectedRep = Math.floor(expectedRep);
+            //communityRep.should.be.bignumber.equal(expectedRep);
+            console.log('Community Reputation: ' + communityRep);
+
+            //Local Node rep
+            localNodeRep = await reputationInstance.getLocalNodeReputation(localNode1).should.be.fulfilled;
+            initialLocalNodeReputation = await storageInstance.getUint(utils.soliditySha3("localNode.reputation", localNode1));
+            console.log('Initial Local Node Reputation: '+ initialLocalNodeReputation);
+            var decrement = initialLocalNodeReputation.mul(defaultDays).div(maxDefaultDays);
+            var expectedRep = initialLocalNodeReputation.sub(decrement).toNumber();
+            expectedRep = Math.floor(expectedRep);
+            //localNodeRep.should.be.bignumber.equal(expectedRep);
+            console.log('Local Node Reputation: ' + localNodeRep);
 
             // Register the invetors
             transaction = await userManagerInstance.registerInvestor(investor1);
@@ -200,6 +228,7 @@ contract('EthicHubLending', function() {
             var isRunning = await lendingInstance.isContribPeriodRunning();
             isRunning.should.be.equal(true);
 
+            // Investment part
             //Raw transaction in truffle develop. CAUTION the private key is from truffle
             //await rawTransaction(investor1, privateKeys[5], lendingInstance.address, '', investment1).should.be.fulfilled;
             //Send transaction
@@ -214,20 +243,20 @@ contract('EthicHubLending', function() {
             // Goal is reached, no accepts more invesments
             await lendingInstance.sendTransaction({value: investment3, from: investor3}).should.be.rejectedWith(EVMRevert);
             //reportMethodGasUsed('report', 'investor3', 'lendingInstance.sendTransaction', transaction.tx);
-            // Finish
             transaction = await lendingInstance.finishInitialExchangingPeriod(initialEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
             reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.finishInitialExchangingPeriod', transaction.tx);
+
+            // Borrower return amount
             transaction = await lendingInstance.setBorrowerReturnEthPerFiatRate(finalEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
             reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.setBorrowerReturnEthPerFiatRate', transaction.tx);
             // Show balances
             //console.log('=== MIDDLE ===');
             //await traceBalancesAllActors();
+            // Show amounts to return
             const borrowerReturnAmount = await lendingInstance.borrowerReturnAmount();
             //console.log('Community return amount (ETH):' + utils.fromWei(utils.toBN(borrowerReturnAmount)));
-            const borrowerReturnFiatAmount = await lendingInstance.borrowerReturnFiatAmount();
+            //const borrowerReturnFiatAmount = await lendingInstance.borrowerReturnFiatAmount();
             //console.log('Community return amount (pesos):' + utils.fromWei(utils.toBN(borrowerReturnFiatAmount)));
-            //Increase the days
-            //await increaseTimeTo(latestTime() + duration.days(36));
             transaction = await lendingInstance.returnBorrowedEth({value: borrowerReturnAmount, from: community}).should.be.fulfilled;
             reportMethodGasUsed('report', 'community', 'lendingInstance.returnBorrowedEth', transaction.tx);
             // Reclaims amounts
@@ -243,7 +272,11 @@ contract('EthicHubLending', function() {
             // Show balances
             //console.log('=== FINISH ===');
             //await traceBalancesAllActors();
-
+            // Show reputation
+            localNodeRep = await reputationInstance.getLocalNodeReputation(localNode1);
+            console.log('Final Local Node Reputation: ' + localNodeRep);
+            communityRep = await reputationInstance.getCommunityReputation(community);
+            console.log('Final Community Reputation: ' + communityRep);
         });
     });
 });
