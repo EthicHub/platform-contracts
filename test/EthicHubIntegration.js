@@ -97,6 +97,7 @@ contract('EthicHubUser', function() {
     let ownerUserManager;
     let web3Contract;
     before(async () => {
+        await advanceBlock();
         instances = await deployedContracts();
         storageInstance = instances[0];
         userManagerInstance = instances[1];
@@ -157,6 +158,7 @@ contract('EthicHubLending', function() {
     let ownerLending;
     let web3Contract;
     before(async () => {
+        await advanceBlock();
         instances = await deployedContracts();
         storageInstance = instances[0];
         userManagerInstance = instances[1];

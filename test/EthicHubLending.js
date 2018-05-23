@@ -28,7 +28,7 @@ const MockReputation = artifacts.require('./helper_contracts/MockReputation.sol'
 
 contract('EthicHubLending', function ([owner, borrower, investor, investor2, investor3, investor4, investor5, localNode, ethicHubTeam, wallet]) {
     beforeEach(async function () {
-        //await advanceBlock();
+        await advanceBlock();
         this.fundingStartTime = latestTime() + duration.days(1);
         this.fundingEndTime = this.fundingStartTime + duration.days(40);
         this.lendingInterestRatePercentage = 15;
