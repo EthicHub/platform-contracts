@@ -96,7 +96,6 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         ethicHubTeam = _ethicHubTeam;
 
         borrower = _borrower;
-        // 15 * (lending days)/ 365 + 4% local node fee + EthicHub fee
         annualInterest = _annualInterest;
 
         require(_totalLendingAmount > 0);
@@ -189,11 +188,6 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         emit StateChange(uint(state));
     }
 
-    function checkInvestorContribution(address investor) public view returns(uint256){
-        return investors[investor].amount;
-    }
-
-
     /**
      * Method to reclaim contribution after a project is declared as not funded
      * @param  beneficiary the contributor
@@ -260,7 +254,6 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         updateReputation();
     }
 
-
     // @notice Function to participate in contribution period
     //  Amounts from the same address should be added up
     //  If cap is reached, end time should be modified
@@ -303,12 +296,6 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         emit onContribution(newTotalContributed, contributor, contribValue, investorCount);
     }
 
-
-
-    function isContribPeriodRunning() public constant returns(bool) {
-        return fundingStartTime <= now && fundingEndTime > now && !capReached;
-    }
-
     function sendFundsToBorrower() internal {
       //Waiting for Exchange
         require(capReached);
@@ -341,6 +328,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     }
 
     // lendingInterestRate with 2 decimal
+    // 15 * (lending days)/ 365 + 4% local node fee + 3% LendingDev fee
     function lendingInterestRatePercentage() public view returns(uint256){
         return annualInterest.mul(interestBaseUint).mul(lendingDays.add(getDefaultDays(now))).div(365).add(localNodeFee.mul(interestBaseUint)).add(ethichubFee.mul(interestBaseUint)).add(interestBasePercent);
     }
@@ -358,5 +346,11 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         return borrowerReturnFiatAmount().div(borrowerReturnEthPerFiatRate);
     }
 
+    function isContribPeriodRunning() public view returns(bool) {
+        return fundingStartTime <= now && fundingEndTime > now && !capReached;
+    }
 
+    function checkInvestorContribution(address investor) public view returns(uint256){
+        return investors[investor].amount;
+    }
 }
