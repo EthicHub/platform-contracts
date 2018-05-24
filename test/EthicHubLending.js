@@ -26,7 +26,7 @@ const EthicHubLending = artifacts.require('EthicHubLending');
 const MockStorage = artifacts.require('./helper_contracts/MockStorage.sol');
 const MockReputation = artifacts.require('./helper_contracts/MockReputation.sol');
 
-contract('EthicHubLending', function ([owner, borrower, investor, investor2, investor3, investor4, investor5, localNode, ethicHubTeam, wallet]) {
+contract('EthicHubLending', function ([owner, representative, investor, investor2, investor3, investor4, investor5, localNode, ethicHubTeam, community]) {
     beforeEach(async function () {
         await advanceBlock();
         this.fundingStartTime = latestTime() + duration.days(1);
@@ -48,7 +48,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
         this.lending = await EthicHubLending.new(
                                                 this.fundingStartTime,
                                                 this.fundingEndTime,
-                                                borrower,
+                                                representative,
                                                 this.lendingInterestRatePercentage,
                                                 this.totalLendingAmount,
                                                 this.lendingDays,
@@ -62,8 +62,9 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
         await this.mockStorage.setBool(utils.soliditySha3("user", "investor",investor3),true);
         await this.mockStorage.setBool(utils.soliditySha3("user", "investor",investor4),true);
         await this.mockStorage.setBool(utils.soliditySha3("user", "investor",investor5),true);
+        await this.mockStorage.setBool(utils.soliditySha3("user", "community",community),true);
 
-        await this.lending.saveInitialParametersToStorage(this.defaultMaxDays, this.tier, this.members);
+        await this.lending.saveInitialParametersToStorage(this.defaultMaxDays, this.tier, this.members,community);
     });
 
     describe('initializing', function() {
@@ -71,7 +72,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             var someLending = await EthicHubLending.new(
                                                     this.fundingStartTime,
                                                     this.fundingEndTime,
-                                                    borrower,
+                                                    representative,
                                                     this.lendingInterestRatePercentage,
                                                     this.totalLendingAmount,
                                                     this.lendingDays,
@@ -197,9 +198,9 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
           const investor2InitialBalance = await web3.eth.getBalance(investor2);
           await this.lending.sendTransaction({value: investment2, from: investor2}).should.be.fulfilled;
           await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-          await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
-          const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
-          await this.lending.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
+          await this.lending.setRepresentativeReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+          const representativeReturnAmount = await this.lending.representativeReturnAmount();
+          await this.lending.sendTransaction({value: representativeReturnAmount, from: representative}).should.be.fulfilled;
           await this.lending.reclaimContribution(investor2).should.be.rejectedWith(EVMRevert);
       });
 
@@ -220,15 +221,15 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
 
       });
 
-      it('should transfer to borrower after cap reached', async function() {
-        var initialBorrowerBalance = await web3.eth.getBalance(borrower);
+      it('should transfer to representative after cap reached', async function() {
+        var initialRepresentativeBalance = await web3.eth.getBalance(representative);
         await increaseTimeTo(this.fundingStartTime  + duration.days(1))
         await this.lending.sendTransaction({value:this.totalLendingAmount, from: investor}).should.be.fulfilled;
 
         var balance = await web3.eth.getBalance(this.lending.address);
         balance.should.be.bignumber.equal(new BigNumber(0));
-        var finalBorrowerBalance = await web3.eth.getBalance(borrower);
-        var balance = finalBorrowerBalance.sub(initialBorrowerBalance);
+        var finalRepresentativeBalance = await web3.eth.getBalance(representative);
+        var balance = finalRepresentativeBalance.sub(initialRepresentativeBalance);
         balance.should.be.bignumber.equal(this.totalLendingAmount);
       });
 
@@ -249,10 +250,10 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
           const lendingFiatAmount = new BigNumber(this.initialEthPerFiatRate).mul(this.totalLendingAmount);
           const contractTotalLendingFiatAmount = await this.lending.totalLendingFiatAmount();
           contractTotalLendingFiatAmount.should.be.bignumber.equal(lendingFiatAmount);
-          const contractBorrowerReturnFiatAmount = await this.lending.borrowerReturnFiatAmount();
+          const contractRepresentativeReturnFiatAmount = await this.lending.representativeReturnFiatAmount();
           const interest = parseInt((this.lendingInterestRatePercentage * 100) * (this.lendingDays) / (365)) + this.ethichubFee * 100 + this.localNodeFee * 100 ;
-          const borrowerReturnFiatAmount = lendingFiatAmount.mul(interest + 10000).div(10000) ;
-          contractBorrowerReturnFiatAmount.should.be.bignumber.equal(borrowerReturnFiatAmount);
+          const representativeReturnFiatAmount = lendingFiatAmount.mul(interest + 10000).div(10000) ;
+          contractRepresentativeReturnFiatAmount.should.be.bignumber.equal(representativeReturnFiatAmount);
 
       });
 
@@ -274,23 +275,23 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
       });
     });
 
-    describe('Borrower return', function() {
+    describe('Representative return', function() {
 
         it('should set correct parameters', async function() {
             await increaseTimeTo(this.fundingStartTime  + duration.days(1))
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            await this.lending.setRepresentativeReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
             var state = await this.lending.state();
             state.toNumber().should.be.equal(AwaitingReturn);
-            const borrowerReturnEthPerFiatRate = await this.lending.borrowerReturnEthPerFiatRate();
-            borrowerReturnEthPerFiatRate.should.be.bignumber.equal(new BigNumber(this.finalEthPerFiatRate));
+            const representativeReturnEthPerFiatRate = await this.lending.representativeReturnEthPerFiatRate();
+            representativeReturnEthPerFiatRate.should.be.bignumber.equal(new BigNumber(this.finalEthPerFiatRate));
             const lendingFiatAmount = new BigNumber(this.initialEthPerFiatRate).mul(this.totalLendingAmount);
             const interest = parseInt((this.lendingInterestRatePercentage * 100) * (this.lendingDays) / (365)) + this.ethichubFee * 100 + this.localNodeFee * 100 ;
-            const borrowerReturnFiatAmount = lendingFiatAmount.mul(interest + 10000).div(10000);
-            const borrowerReturnAmount = borrowerReturnFiatAmount.div(this.finalEthPerFiatRate);
-            const contractBorrowerReturnAmount = await this.lending.borrowerReturnAmount();
-            contractBorrowerReturnAmount.should.be.bignumber.equal(borrowerReturnAmount);
+            const representativeReturnFiatAmount = lendingFiatAmount.mul(interest + 10000).div(10000);
+            const representativeReturnAmount = representativeReturnFiatAmount.div(this.finalEthPerFiatRate);
+            const contractRepresentativeReturnAmount = await this.lending.representativeReturnAmount();
+            contractRepresentativeReturnAmount.should.be.bignumber.equal(representativeReturnAmount);
 
         });
 
@@ -298,18 +299,18 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await increaseTimeTo(this.fundingStartTime  + duration.days(1))
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            await this.lending.setRepresentativeReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
             var state = await this.lending.state();
             state.toNumber().should.be.equal(AwaitingReturn);
-            const borrowerReturnEthPerFiatRate = await this.lending.borrowerReturnEthPerFiatRate();
-            borrowerReturnEthPerFiatRate.should.be.bignumber.equal(new BigNumber(this.finalEthPerFiatRate));
+            const representativeReturnEthPerFiatRate = await this.lending.representativeReturnEthPerFiatRate();
+            representativeReturnEthPerFiatRate.should.be.bignumber.equal(new BigNumber(this.finalEthPerFiatRate));
             const lendingFiatAmount = new BigNumber(this.initialEthPerFiatRate).mul(this.totalLendingAmount);
 
             var interest = parseInt((this.lendingInterestRatePercentage * 100) * (this.lendingDays) / (365)) + this.ethichubFee * 100 + this.localNodeFee * 100 ;
-            var borrowerReturnFiatAmount = lendingFiatAmount.mul(interest + 10000).div(10000);
-            var borrowerReturnAmount = borrowerReturnFiatAmount.div(this.finalEthPerFiatRate);
-            var contractBorrowerReturnAmount = await this.lending.borrowerReturnAmount();
-            contractBorrowerReturnAmount.should.be.bignumber.equal(borrowerReturnAmount);
+            var representativeReturnFiatAmount = lendingFiatAmount.mul(interest + 10000).div(10000);
+            var representativeReturnAmount = representativeReturnFiatAmount.div(this.finalEthPerFiatRate);
+            var contractRepresentativeReturnAmount = await this.lending.representativeReturnAmount();
+            contractRepresentativeReturnAmount.should.be.bignumber.equal(representativeReturnAmount);
 
             var defaultTime = this.lending.fundingEndTime() + duration.days(this.lendingDays) + duration.days(90);
 
@@ -319,17 +320,17 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await web3.eth.sendTransaction({to: owner, value: 1, from: owner});
 
             interest = parseInt((this.lendingInterestRatePercentage * 100) * (this.lendingDays) / (365)) + this.ethichubFee * 100 + this.localNodeFee * 100 ;
-            borrowerReturnFiatAmount = lendingFiatAmount.mul(interest + 10000).div(10000);
-            borrowerReturnAmount = borrowerReturnFiatAmount.div(this.finalEthPerFiatRate);
-            contractBorrowerReturnAmount = await this.lending.borrowerReturnAmount();
-            contractBorrowerReturnAmount.should.be.bignumber.equal(borrowerReturnAmount);
+            representativeReturnFiatAmount = lendingFiatAmount.mul(interest + 10000).div(10000);
+            representativeReturnAmount = representativeReturnFiatAmount.div(this.finalEthPerFiatRate);
+            contractRepresentativeReturnAmount = await this.lending.representativeReturnAmount();
+            contractRepresentativeReturnAmount.should.be.bignumber.equal(representativeReturnAmount);
         });
 
 
         it('should not allow to stablish return in other state', async function() {
             await increaseTimeTo(this.fundingStartTime  + duration.days(1))
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
-            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.rejectedWith(EVMRevert);
+            await this.lending.setRepresentativeReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.rejectedWith(EVMRevert);
         });
 
         it('should not allow to return contribution before setting exchange rate', async function() {
@@ -342,9 +343,9 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await increaseTimeTo(this.fundingStartTime  + duration.days(1))
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
-            await this.lending.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
+            await this.lending.setRepresentativeReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            const representativeReturnAmount = await this.lending.representativeReturnAmount();
+            await this.lending.sendTransaction({value: representativeReturnAmount, from: representative}).should.be.fulfilled;
 
         });
 
@@ -352,9 +353,9 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await increaseTimeTo(this.fundingStartTime  + duration.days(1))
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
-            await this.lending.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
+            await this.lending.setRepresentativeReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            const representativeReturnAmount = await this.lending.representativeReturnAmount();
+            await this.lending.sendTransaction({value: representativeReturnAmount, from: representative}).should.be.fulfilled;
             var calledIncrease = await this.mockReputation.incrementCalled();
             calledIncrease.should.be.equal(true);
         });
@@ -364,20 +365,20 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
 
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
+            await this.lending.setRepresentativeReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            const representativeReturnAmount = await this.lending.representativeReturnAmount();
 
             //This should be the edge case : end of funding time + awaiting for return period.
             var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) + duration.days(10);
             await increaseTimeTo(defaultTime);//+ duration.days(1) + duration.minutes(2));//+ duration.seconds(1))
-            await this.lending.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.rejectedWith(EVMRevert);
-            const trueBorrowerReturnAmount = await this.lending.borrowerReturnAmount() // actual returnAmount
-            await this.lending.sendTransaction({value: trueBorrowerReturnAmount, from: borrower}).should.be.fulfilled;
+            await this.lending.sendTransaction({value: representativeReturnAmount, from: representative}).should.be.rejectedWith(EVMRevert);
+            const trueRepresentativeReturnAmount = await this.lending.representativeReturnAmount() // actual returnAmount
+            await this.lending.sendTransaction({value: trueRepresentativeReturnAmount, from: representative}).should.be.fulfilled;
 
             var calledBurn = await this.mockReputation.burnCalled();
             calledBurn.should.be.equal(true);
-            var defaultDays = await this.mockStorage.getUint(utils.soliditySha3("lending.defaultDays", this.lending.address));
-            defaultDays.toNumber().should.be.equal(10);
+            var delayDays = await this.mockStorage.getUint(utils.soliditySha3("lending.delayDays", this.lending.address));
+            delayDays.toNumber().should.be.equal(10);
 
 
         });
@@ -387,9 +388,9 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await increaseTimeTo(this.fundingStartTime  + duration.days(1))
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
-            await this.lending.sendTransaction({value: borrowerReturnAmount.sub(1), from: borrower}).should.be.rejectedWith(EVMRevert);
+            await this.lending.setRepresentativeReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            const representativeReturnAmount = await this.lending.representativeReturnAmount();
+            await this.lending.sendTransaction({value: representativeReturnAmount.sub(1), from: representative}).should.be.rejectedWith(EVMRevert);
 
         });
 
@@ -399,25 +400,25 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
     describe('Default', async function() {
         it('should calculate correct time difference', async function() {
             var defaultTime = this.fundingEndTime + duration.days(this.lendingDays);
-            for (var defaultDays = 0; defaultDays <= 10; defaultDays++) {
-                var resultDays = await this.lending.getDefaultDays(defaultTime + duration.days(defaultDays));
-                resultDays.toNumber().should.be.equal(defaultDays);
+            for (var delayDays = 0; delayDays <= 10; delayDays++) {
+                var resultDays = await this.lending.getDelayDays(defaultTime + duration.days(delayDays));
+                resultDays.toNumber().should.be.equal(delayDays);
             }
         });
 
         it('should count half a day as full day', async function() {
             var defaultTime = this.fundingEndTime + duration.days(this.lendingDays);
-            var resultDays = await this.lending.getDefaultDays(defaultTime + duration.days(1.5));
+            var resultDays = await this.lending.getDelayDays(defaultTime + duration.days(1.5));
             resultDays.toNumber().should.be.equal(1);
         });
 
         it('should be 0 days if not yet ended', async function() {
             var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) - duration.seconds(1);
-            var resultDays = await this.lending.getDefaultDays(defaultTime);
+            var resultDays = await this.lending.getDelayDays(defaultTime);
             resultDays.toNumber().should.be.equal(0);
         });
 
-        it('should allow declare project as default if no money returned after maxDefaultDays', async function() {
+        it('should allow declare project as default if no money returned after maxDelayDays', async function() {
             await increaseTimeTo(this.fundingEndTime  - duration.minutes(1))
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
@@ -425,12 +426,12 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             const defaultTime = endTime.add(duration.days(this.lendingDays)).add(duration.days(this.defaultMaxDays));
             increaseTimeTo(defaultTime);
             // send invalid transaction to advance time
-            await this.lending.sendTransaction({value: 1, from: borrower}).should.be.rejectedWith(EVMRevert);
+            await this.lending.sendTransaction({value: 1, from: representative}).should.be.rejectedWith(EVMRevert);
             var tx = await this.lending.declareProjectDefault().should.be.fulfilled;
             var calledBurn = await this.mockReputation.burnCalled();
             calledBurn.should.be.equal(true);
-            var defaultDays = await this.mockStorage.getUint(utils.soliditySha3("lending.defaultDays", this.lending.address));
-            defaultDays.toNumber().should.be.equal(this.defaultMaxDays);
+            var delayDays = await this.mockStorage.getUint(utils.soliditySha3("lending.delayDays", this.lending.address));
+            delayDays.toNumber().should.be.equal(this.defaultMaxDays);
             var state = await this.lending.state();
             state.toNumber().should.be.equal(Default);
         });
@@ -439,7 +440,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await increaseTimeTo(this.fundingEndTime  - duration.minutes(1))
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            await increaseTimeTo(this.fundingEndTime  + duration.days(this.lendingDays) + duration.days(this.maxDefaultDays) - duration.days(1));
+            await increaseTimeTo(this.fundingEndTime  + duration.days(this.lendingDays) + duration.days(this.maxDelayDays) - duration.days(1));
             await this.lending.declareProjectDefault().should.be.rejectedWith(EVMRevert);
         });
     });
@@ -465,10 +466,10 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             const investor4SendTransactionBalance = await web3.eth.getBalance(investor4);
 
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            //console.log("borrowerReturnAmount: " + utils.fromWei(utils.toBN(borrowerReturnAmount)));
-            const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
-            await this.lending.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
+            await this.lending.setRepresentativeReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            //console.log("representativeReturnAmount: " + utils.fromWei(utils.toBN(representativeReturnAmount)));
+            const representativeReturnAmount = await this.lending.representativeReturnAmount();
+            await this.lending.sendTransaction({value: representativeReturnAmount, from: representative}).should.be.fulfilled;
             await this.lending.reclaimContributionWithInterest(investor2, {from: investor2});
             await this.lending.reclaimContributionWithInterest(investor3, {from: investor3});
             await this.lending.reclaimContributionWithInterest(investor4, {from: investor4});
@@ -512,9 +513,9 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await this.lending.sendTransaction({value: investment3, from: investor3}).should.be.fulfilled;
 
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
-            await this.lending.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
+            await this.lending.setRepresentativeReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            const representativeReturnAmount = await this.lending.representativeReturnAmount();
+            await this.lending.sendTransaction({value: representativeReturnAmount, from: representative}).should.be.fulfilled;
             await this.lending.reclaimContributionWithInterest(investor2, {from: investor2}).should.be.fulfilled;
             await this.lending.reclaimContributionWithInterest(investor2, {from: investor2}).should.be.rejectedWith(EVMRevert);
         });
@@ -545,10 +546,10 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             const investor4SendTransactionBalance = await web3.eth.getBalance(investor4);
 
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
-            //console.log("borrowerReturnAmount: " + utils.fromWei(utils.toBN(borrowerReturnAmount)));
-            await this.lending.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
+            await this.lending.setRepresentativeReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            const representativeReturnAmount = await this.lending.representativeReturnAmount();
+            //console.log("representativeReturnAmount: " + utils.fromWei(utils.toBN(representativeReturnAmount)));
+            await this.lending.sendTransaction({value: representativeReturnAmount, from: representative}).should.be.fulfilled;
             await this.lending.reclaimContributionWithInterest(investor2, {from: investor2});
             await this.lending.reclaimContributionWithInterest(investor3, {from: investor3});
             await this.lending.reclaimContributionWithInterest(investor4, {from: investor4});
@@ -577,7 +578,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await increaseTimeTo(this.fundingStartTime + duration.days(1));
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
 
-            await this.lending.sendTransaction({value: ether(1), from: borrower}).should.be.fulfilled;
+            await this.lending.sendTransaction({value: ether(1), from: representative}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
         })
 
@@ -585,7 +586,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await increaseTimeTo(this.fundingStartTime  + duration.days(1));
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
 
-            await this.lending.sendTransaction({value: this.totalLendingAmount.add(ether(1)), from: borrower}).should.be.rejectedWith(EVMRevert);
+            await this.lending.sendTransaction({value: this.totalLendingAmount.add(ether(1)), from: representative}).should.be.rejectedWith(EVMRevert);
         })
 
         it('Should not allow to send partial return after the rate is set', async function() {
@@ -593,10 +594,10 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
 
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            await this.lending.sendTransaction({value: ether(1), from: borrower}).should.be.rejectedWith(EVMRevert);
+            await this.lending.sendTransaction({value: ether(1), from: representative}).should.be.rejectedWith(EVMRevert);
         })
 
-        it('Should only allow borrower to send partial return', async function() {
+        it('Should only allow representative to send partial return', async function() {
             await increaseTimeTo(this.fundingStartTime  + duration.days(1));
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
 
@@ -615,10 +616,10 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
 
 
             // send surplus 1 eth
-            await this.lending.sendTransaction({value: surplus, from: borrower}).should.be.fulfilled
+            await this.lending.sendTransaction({value: surplus, from: representative}).should.be.fulfilled
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
 
-            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            await this.lending.setRepresentativeReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
             var investorInitialBalance = await web3.eth.getBalance(investor);
             var investor2InitialBalance = await web3.eth.getBalance(investor2);
             await this.lending.reclaimSurplusEth(investor).should.be.fulfilled;
@@ -634,9 +635,9 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             checkLostinTransactions(expectedInvestor2Balance,investor2FinalBalance);
 
 
-            const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
-            //console.log("borrowerReturnAmount: " + utils.fromWei(utils.toBN(borrowerReturnAmount)));
-            await this.lending.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
+            const representativeReturnAmount = await this.lending.representativeReturnAmount();
+            //console.log("representativeReturnAmount: " + utils.fromWei(utils.toBN(representativeReturnAmount)));
+            await this.lending.sendTransaction({value: representativeReturnAmount, from: representative}).should.be.fulfilled;
 
             var investorInitialBalance = await web3.eth.getBalance(investor);
             var investor2InitialBalance = await web3.eth.getBalance(investor2);
@@ -710,7 +711,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
 
         it('cap reached', async function () {
             await increaseTimeTo(this.fundingStartTime  + duration.days(1))
-            var borrowerBalance = await web3.eth.getBalance(borrower);
+            var representativeBalance = await web3.eth.getBalance(representative);
             await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.fulfilled;
             await this.lending.sendTransaction({value:ether(1), from: investor2}).should.be.fulfilled;
             var balance = await web3.eth.getBalance(this.lending.address);
@@ -718,7 +719,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await this.lending.sendTransaction({value:ether(1), from: investor3}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
             await increaseTimeTo(this.fundingEndTime  + duration.days(1))
-            new BigNumber(await web3.eth.getBalance(borrower)).should.be.bignumber.above(new BigNumber(borrowerBalance).add(ether(2.9).toNumber()));
+            new BigNumber(await web3.eth.getBalance(representative)).should.be.bignumber.above(new BigNumber(representativeBalance).add(ether(2.9).toNumber()));
             var balance = await web3.eth.getBalance(this.lending.address);
             balance.toNumber().should.be.equal(ether(0).toNumber());
 
@@ -729,24 +730,24 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             // can reclaim contribution from everyone
             await this.lending.reclaimContribution(investor).should.be.rejectedWith(EVMRevert);
 
-            var fiatAmount = await this.lending.borrowerReturnFiatAmount();
+            var fiatAmount = await this.lending.representativeReturnFiatAmount();
             new BigNumber(fiatAmount).should.be.bignumber.equal(new BigNumber(ether(3)).mul(this.lendingInterestRatePercentage).div(100).mul(400));
 
             // should set rate before
             await this.lending.sendTransaction({value: ether(3)}).should.be.rejectedWith(EVMRevert);
-            await this.lending.setBorrowerReturnEthPerFiatRate(500, {from: owner}).should.be.fulfilled;
+            await this.lending.setRepresentativeReturnEthPerFiatRate(500, {from: owner}).should.be.fulfilled;
 
-            var borrowerReturnAmount = await this.lending.borrowerReturnAmount();
-            new BigNumber(borrowerReturnAmount).should.be.bignumber.equal(new BigNumber(fiatAmount).div(500));
+            var representativeReturnAmount = await this.lending.representativeReturnAmount();
+            new BigNumber(representativeReturnAmount).should.be.bignumber.equal(new BigNumber(fiatAmount).div(500));
 
             var balance = await web3.eth.getBalance(this.lending.address);
             balance.toNumber().should.be.equal(ether(0).toNumber());
-            await this.lending.sendTransaction({value: borrowerReturnAmount + 1}).should.be.rejectedWith(EVMRevert);
-            await this.lending.sendTransaction({value: borrowerReturnAmount}).should.be.fulfilled;
+            await this.lending.sendTransaction({value: representativeReturnAmount + 1}).should.be.rejectedWith(EVMRevert);
+            await this.lending.sendTransaction({value: representativeReturnAmount}).should.be.fulfilled;
             var state = await this.lending.state();
             state.toNumber().should.be.equal(3);
             var balance = await web3.eth.getBalance(this.lending.address);
-            balance.toNumber().should.be.equal(borrowerReturnAmount.toNumber());
+            balance.toNumber().should.be.equal(representativeReturnAmount.toNumber());
             await this.lending.reclaimContributionWithInterest(investor)
             await this.lending.reclaimContributionWithInterest(investor2)
             await this.lending.reclaimContributionWithInterest(investor3)
@@ -758,7 +759,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
 
         it('can return with sendTransaction', async function () {
             await increaseTimeTo(this.fundingStartTime  + duration.days(1))
-            var borrowerBalance = await web3.eth.getBalance(borrower);
+            var representativeBalance = await web3.eth.getBalance(representative);
             await this.lending.sendTransaction({value:ether(1), from: investor}).should.be.fulfilled;
             await this.lending.sendTransaction({value:ether(1), from: investor2}).should.be.fulfilled;
             var balance = await web3.eth.getBalance(this.lending.address);
@@ -768,7 +769,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
 
             await increaseTimeTo(this.fundingEndTime  + duration.days(1))
-            new BigNumber(await web3.eth.getBalance(borrower)).should.be.bignumber.above(new BigNumber(borrowerBalance).add(ether(2.9).toNumber()));
+            new BigNumber(await web3.eth.getBalance(representative)).should.be.bignumber.above(new BigNumber(representativeBalance).add(ether(2.9).toNumber()));
             var balance = await web3.eth.getBalance(this.lending.address);
             balance.toNumber().should.be.equal(ether(0).toNumber());
 
@@ -778,25 +779,25 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
 
             await this.lending.reclaimContribution(investor).should.be.rejectedWith(EVMRevert);
 
-            var fiatAmount = await this.lending.borrowerReturnFiatAmount();
+            var fiatAmount = await this.lending.representativeReturnFiatAmount();
             new BigNumber(fiatAmount).should.be.bignumber.equal(new BigNumber(ether(3)).mul(this.lendingInterestRatePercentage).div(100).mul(400));
 
             // should set rate before
             await this.lending.sendTransaction({value: ether(3)}).should.be.rejectedWith(EVMRevert);
-            await this.lending.setBorrowerReturnEthPerFiatRate(500, {from: owner}).should.be.fulfilled;
+            await this.lending.setRepresentativeReturnEthPerFiatRate(500, {from: owner}).should.be.fulfilled;
 
-            var borrowerReturnAmount = await this.lending.borrowerReturnAmount();
-            new BigNumber(borrowerReturnAmount).should.be.bignumber.equal(new BigNumber(fiatAmount).div(500));
+            var representativeReturnAmount = await this.lending.representativeReturnAmount();
+            new BigNumber(representativeReturnAmount).should.be.bignumber.equal(new BigNumber(fiatAmount).div(500));
 
             var balance = await web3.eth.getBalance(this.lending.address);
             balance.toNumber().should.be.equal(ether(0).toNumber());
             var state = await this.lending.state();
-            await this.lending.sendTransaction({value: borrowerReturnAmount+1}).should.be.rejectedWith(EVMRevert);
-            await this.lending.sendTransaction({value: borrowerReturnAmount}).should.be.fulfilled;
+            await this.lending.sendTransaction({value: representativeReturnAmount+1}).should.be.rejectedWith(EVMRevert);
+            await this.lending.sendTransaction({value: representativeReturnAmount}).should.be.fulfilled;
             var state = await this.lending.state();
             state.toNumber().should.be.equal(3);
             var balance = await web3.eth.getBalance(this.lending.address);
-            balance.toNumber().should.be.equal(borrowerReturnAmount.toNumber());
+            balance.toNumber().should.be.equal(representativeReturnAmount.toNumber());
             await this.lending.reclaimContributionWithInterest(investor)
             await this.lending.reclaimContributionWithInterest(investor2)
             await this.lending.reclaimContributionWithInterest(investor3)

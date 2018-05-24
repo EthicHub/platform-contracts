@@ -110,14 +110,15 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         state = LendingState.Uninitialized;
     }
 
-    function saveInitialParametersToStorage(uint _maxDelayDays, uint _tier, uint _communityMembers) external onlyOwner {
+    function saveInitialParametersToStorage(uint _maxDelayDays, uint _tier, uint _communityMembers, address _community) external onlyOwner {
         require(_maxDelayDays != 0);
         require(state == LendingState.Uninitialized);
         require(_tier > 0);
         require(_communityMembers >= 20);
+        require(ethicHubStorage.getBool(keccak256("user", "community", _community)));
         require(ethicHubStorage.getBool(keccak256("user", "localNode", msg.sender)));
         ethicHubStorage.setUint(keccak256("lending.maxDelayDays", this), _maxDelayDays);
-        ethicHubStorage.setAddress(keccak256("lending.community", this), representative);
+        ethicHubStorage.setAddress(keccak256("lending.community", this), _community);
         ethicHubStorage.setAddress(keccak256("lending.localNode", this), msg.sender);
         ethicHubStorage.setUint(keccak256("lending.tier", this), _tier);
         ethicHubStorage.setUint(keccak256("lending.representatives", this), _communityMembers);
