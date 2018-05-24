@@ -132,7 +132,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.AwaitingReturn || state == LendingState.AcceptingContributions || state == LendingState.ExchangingToFiat);
         if(state == LendingState.AwaitingReturn) {
             returnBorrowedEth();
-        } else if (state == LendingState.ExchangingToFiat){
+        } else if (state == LendingState.ExchangingToFiat) {
             // borrower can send surplus eth back to contract to avoid paying interest
             sendBackSurplusEth();
         } else {
@@ -284,7 +284,6 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
             totalContributed = totalLendingAmount;
 
-            sendFundsToBorrower();
         }
         if (investors[contributor].amount == 0) {
             investorCount = investorCount.add(1);
@@ -297,13 +296,13 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         emit onContribution(newTotalContributed, contributor, contribValue, investorCount);
     }
 
-    function sendFundsToBorrower() internal {
+    function sendFundsToBorrower() external onlyOwner {
       //Waiting for Exchange
+        require(state == LendingState.AcceptingContributions);
         require(capReached);
-        borrower.transfer(totalContributed);
         state = LendingState.ExchangingToFiat;
         emit StateChange(uint(state));
-
+        borrower.transfer(totalContributed);
     }
 
     function updateReputation() internal {
