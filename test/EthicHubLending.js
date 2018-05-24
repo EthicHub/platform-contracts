@@ -144,6 +144,45 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
 
     });
 
+    describe('Partial returning of funds', function() {
+        it('full payment of the loan in several transfers should be allowed', async function() {
+            await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+            await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
+            await this.lending.sendFundsToBorrower({from:owner}).should.be.fulfilled;
+            await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
+            await this.lending.sendTransaction({value: borrowerReturnAmount.div(2), from: borrower}).should.be.fulfilled;
+            await this.lending.sendTransaction({value: borrowerReturnAmount.div(2), from: borrower}).should.be.fulfilled;
+            const state = await this.lending.state();
+            state.should.be.bignumber.equal(ContributionReturned);
+        })
+
+        it('partial payment of the loan should be still default', async function() {
+            await increaseTimeTo(this.fundingEndTime - duration.minutes(1));
+
+            await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
+            await this.lending.sendFundsToBorrower({from:owner}).should.be.fulfilled;
+            await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+
+            //This should be the edge case : end of funding time + awaiting for return period.
+            var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) + duration.days(10);
+            await increaseTimeTo(defaultTime);//+ duration.days(1) + duration.minutes(2));//+ duration.seconds(1))
+            const trueBorrowerReturnAmount = await this.lending.borrowerReturnAmount() // actual returnAmount
+            await this.lending.sendTransaction({value: trueBorrowerReturnAmount.div(2), from: borrower}).should.be.fulfilled;
+            await this.lending.sendTransaction({value: trueBorrowerReturnAmount.div(5), from: borrower}).should.be.fulfilled;
+
+            var calledBurn = await this.mockReputation.burnCalled();
+            calledBurn.should.be.equal(true);
+            var delayDays = await this.mockStorage.getUint(utils.soliditySha3("lending.delayDays", this.lending.address));
+            delayDays.toNumber().should.be.equal(10);
+        })
+
+        it('partial payment of the loan should allow to recover contributions')
+
+    });
+
     describe('Retrieving contributions', function() {
       it('should allow to retrieve contributions after declaring project not funded', async function () {
           await increaseTimeTo(this.fundingStartTime  + duration.days(1))

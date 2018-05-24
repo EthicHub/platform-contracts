@@ -249,6 +249,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     function returnBorrowedEth() payable public {
         require(state == LendingState.AwaitingReturn);
         require(borrowerReturnEthPerFiatRate > 0);
+
         require(msg.value == borrowerReturnAmount());
         state = LendingState.ContributionReturned;
         emit StateChange(uint(state));
@@ -265,35 +266,41 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(msg.value >= minContribAmount);
         require(isContribPeriodRunning());
 
-        uint contribValue = msg.value;
-        uint excessContribValue = 0;
         uint oldTotalContributed = totalContributed;
-        totalContributed = oldTotalContributed.add(contribValue);
-        uint newTotalContributed = totalContributed;
-
-        // cap was reached
-        if (newTotalContributed >= totalLendingAmount &&
-            oldTotalContributed < totalLendingAmount) {
-            capReached = true;
+        uint newTotalContributed = 0;
+        uint excessContribValue = 0;
+        (newTotalContributed, capReached, excessContribValue) = calculatePaymentGoal(
+                                                                                    totalLendingAmount,
+                                                                                    oldTotalContributed,
+                                                                                    msg.value);
+        totalContributed = newTotalContributed;
+        if (capReached) {
             fundingEndTime = now;
             emit onCapReached(fundingEndTime);
-
-            // Everything above hard cap will be sent back to contributor
-            excessContribValue = newTotalContributed.sub(totalLendingAmount);
-            contribValue = contribValue.sub(excessContribValue);
-
-            totalContributed = totalLendingAmount;
-
         }
         if (investors[contributor].amount == 0) {
             investorCount = investorCount.add(1);
         }
-        investors[contributor].amount = investors[contributor].amount.add(contribValue);
+        investors[contributor].amount = investors[contributor].amount.add(msg.value);
 
         if (excessContribValue > 0) {
             msg.sender.transfer(excessContribValue);
         }
-        emit onContribution(newTotalContributed, contributor, contribValue, investorCount);
+        emit onContribution(newTotalContributed, contributor, msg.value, investorCount);
+    }
+
+    function calculatePaymentGoal(uint goal, uint oldTotal, uint contribValue) internal returns(uint, bool, uint) {
+        uint newTotal = oldTotal.add(contribValue);
+        bool goalReached = false;
+        uint excess = 0;
+        if (newTotal >= goal &&
+            oldTotal < goal) {
+            goalReached = true;
+            excess = newTotal.sub(goal);
+            contribValue = contribValue.sub(excess);
+            newTotal = goal;
+        }
+        return (newTotal, goalReached, excess);
     }
 
     function sendFundsToBorrower() external onlyOwner {
