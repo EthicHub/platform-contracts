@@ -31,11 +31,11 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     uint256 public lendingDays;
     uint256 public initialEthPerFiatRate;
     uint256 public totalLendingFiatAmount;
-    address public representative;
+    address public borrower;
     address public localNode;
     address public ethicHubTeam;
-    uint256 public representativeReturnDate;
-    uint256 public representativeReturnEthPerFiatRate;
+    uint256 public borrowerReturnDate;
+    uint256 public borrowerReturnEthPerFiatRate;
     uint256 public constant ethichubFee = 3;
     uint256 public constant localNodeFee = 4;
     uint256 public tier;
@@ -74,7 +74,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     function EthicHubLending(
         uint _fundingStartTime,
         uint _fundingEndTime,
-        address _representative,
+        address _borrower,
         uint _annualInterest,
         uint _totalLendingAmount,
         uint256 _lendingDays,
@@ -89,13 +89,13 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         fundingStartTime = _fundingStartTime;
         require(_fundingEndTime > fundingStartTime);
         fundingEndTime = _fundingEndTime;
-        require(_representative != address(0));
+        require(_borrower != address(0));
         require(_localNode != address(0));
         require(_ethicHubTeam != address(0));
         localNode = _localNode;
         ethicHubTeam = _ethicHubTeam;
 
-        representative = _representative;
+        borrower = _borrower;
         annualInterest = _annualInterest;
 
         require(_totalLendingAmount > 0);
@@ -121,7 +121,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         ethicHubStorage.setAddress(keccak256("lending.community", this), _community);
         ethicHubStorage.setAddress(keccak256("lending.localNode", this), msg.sender);
         ethicHubStorage.setUint(keccak256("lending.tier", this), _tier);
-        ethicHubStorage.setUint(keccak256("lending.representatives", this), _communityMembers);
+        ethicHubStorage.setUint(keccak256("lending.communityMembers", this), _communityMembers);
         tier = _tier;
         state = LendingState.AcceptingContributions;
         emit StateChange(uint(state));
@@ -132,8 +132,8 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.AwaitingReturn || state == LendingState.AcceptingContributions || state == LendingState.ExchangingToFiat);
         if(state == LendingState.AwaitingReturn) {
             returnBorrowedEth();
-        } else if (state == LendingState.ExchangingToFiat && msg.sender == representative){
-            // representative can send surplus eth back to contract to avoid paying interest
+        } else if (state == LendingState.ExchangingToFiat && msg.sender == borrower){
+            // borrower can send surplus eth back to contract to avoid paying interest
             sendBackSurplusEth();
         } else {
             contributeWithAddress(msg.sender);
@@ -141,7 +141,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     }
 
     function sendBackSurplusEth() public payable {
-        require(state == LendingState.ExchangingToFiat && msg.sender == representative);
+        require(state == LendingState.ExchangingToFiat && msg.sender == borrower);
         surplusEth = surplusEth.add(msg.value);
         require(surplusEth <= totalLendingAmount);
         onSurplusSent(msg.value);
@@ -169,10 +169,10 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         emit StateChange(uint(state));
     }
 
-    function setRepresentativeReturnEthPerFiatRate(uint256 _representativeReturnEthPerFiatRate) external onlyOwner {
+    function setBorrowerReturnEthPerFiatRate(uint256 _borrowerReturnEthPerFiatRate) external onlyOwner {
         require(state == LendingState.AwaitingReturn);
-        representativeReturnEthPerFiatRate = _representativeReturnEthPerFiatRate;
-        emit onReturnRateSet(representativeReturnEthPerFiatRate);
+        borrowerReturnEthPerFiatRate = _borrowerReturnEthPerFiatRate;
+        emit onReturnRateSet(borrowerReturnEthPerFiatRate);
 
     }
 
@@ -221,7 +221,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         if (surplusEth > 0){
             investorAmount  = investors[beneficiary].amount.mul(totalLendingAmount.sub(surplusEth)).div(totalLendingAmount);
         }
-        uint256 contribution = investorAmount.mul(initialEthPerFiatRate).mul(investorInterest()).div(representativeReturnEthPerFiatRate).div(interestBasePercent);
+        uint256 contribution = investorAmount.mul(initialEthPerFiatRate).mul(investorInterest()).div(borrowerReturnEthPerFiatRate).div(interestBasePercent);
         require(contribution > 0);
         require(!investors[beneficiary].isCompensated);
         investors[beneficiary].isCompensated = true;
@@ -231,7 +231,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     function reclaimLocalNodeFee() external {
         require(state == LendingState.ContributionReturned);
         require(localNodeFeeReclaimed == false);
-        uint256 fee = representativeReturnAmount().mul(localNodeFee).mul(interestBaseUint).div(lendingInterestRatePercentage());
+        uint256 fee = borrowerReturnAmount().mul(localNodeFee).mul(interestBaseUint).div(lendingInterestRatePercentage());
         require(fee > 0);
         localNodeFeeReclaimed = true;
         localNode.transfer(fee);
@@ -240,7 +240,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     function reclaimEthicHubTeamFee() external {
         require(state == LendingState.ContributionReturned);
         require(ethicHubTeamFeeReclaimed == false);
-        uint256 fee = representativeReturnAmount().mul(ethichubFee).mul(interestBaseUint).div(lendingInterestRatePercentage());
+        uint256 fee = borrowerReturnAmount().mul(ethichubFee).mul(interestBaseUint).div(lendingInterestRatePercentage());
         require(fee > 0);
         ethicHubTeamFeeReclaimed = true;
         ethicHubTeam.transfer(fee);
@@ -248,8 +248,8 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
     function returnBorrowedEth() payable public {
         require(state == LendingState.AwaitingReturn);
-        require(representativeReturnEthPerFiatRate > 0);
-        require(msg.value == representativeReturnAmount());
+        require(borrowerReturnEthPerFiatRate > 0);
+        require(msg.value == borrowerReturnAmount());
         state = LendingState.ContributionReturned;
         emit StateChange(uint(state));
         updateReputation();
@@ -284,7 +284,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
             totalContributed = totalLendingAmount;
 
-            sendFundsToRepresentative();
+            sendFundsToBorrower();
         }
         if (investors[contributor].amount == 0) {
             investorCount = investorCount.add(1);
@@ -297,10 +297,10 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         emit onContribution(newTotalContributed, contributor, contribValue, investorCount);
     }
 
-    function sendFundsToRepresentative() internal {
+    function sendFundsToBorrower() internal {
       //Waiting for Exchange
         require(capReached);
-        representative.transfer(totalContributed);
+        borrower.transfer(totalContributed);
         state = LendingState.ExchangingToFiat;
         emit StateChange(uint(state));
 
@@ -339,12 +339,12 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         return annualInterest.mul(interestBaseUint).mul(lendingDays.add(getDelayDays(now))).div(365).add(interestBasePercent);
     }
 
-    function representativeReturnFiatAmount() public view returns(uint256){
+    function borrowerReturnFiatAmount() public view returns(uint256){
         return totalLendingFiatAmount.mul(lendingInterestRatePercentage()).div(interestBasePercent);
     }
 
-    function representativeReturnAmount() public view returns(uint256){
-        return representativeReturnFiatAmount().div(representativeReturnEthPerFiatRate);
+    function borrowerReturnAmount() public view returns(uint256){
+        return borrowerReturnFiatAmount().div(borrowerReturnEthPerFiatRate);
     }
 
     function isContribPeriodRunning() public view returns(bool) {

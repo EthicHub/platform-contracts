@@ -87,7 +87,7 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
         emit ReputationUpdated(community, newCommunityReputation);
 
         //***** Local node
-        uint borrowers = ethicHubStorage.getUint(keccak256("lending.borrowers", lendingContract));
+        uint borrowers = ethicHubStorage.getUint(keccak256("lending.communityMembers", lendingContract));
         uint previousLocalNodeReputation = ethicHubStorage.getUint(keccak256("localNode.reputation", localNode));
         uint newLocalNodeReputation = incrementLocalNodeReputation(previousLocalNodeReputation, projectTier, borrowers);
         ethicHubStorage.setUint(keccak256("localNode.reputation", localNode), newLocalNodeReputation);

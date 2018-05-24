@@ -268,7 +268,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
             await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
-            await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.communityMembers", lendingContract),this.minimumPeopleCommunity);
 
             await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
             await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
@@ -298,7 +298,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
             await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
-            await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.communityMembers", lendingContract),this.minimumPeopleCommunity);
 
             //await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
             await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
@@ -316,7 +316,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
             await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
-            await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.communityMembers", lendingContract),this.minimumPeopleCommunity);
 
             await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
             //await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
@@ -334,7 +334,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             //await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
             await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
-            await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.communityMembers", lendingContract),this.minimumPeopleCommunity);
 
             await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
             await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
@@ -352,7 +352,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
             //await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
-            await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.communityMembers", lendingContract),this.minimumPeopleCommunity);
 
             await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
             await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
