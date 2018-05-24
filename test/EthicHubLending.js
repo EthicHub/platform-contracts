@@ -40,7 +40,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
         this.initialEthPerFiatRate = 400;
         this.finalEthPerFiatRate = 480;
         this.lendingDays = 90;
-        this.defaultMaxDays = 90;
+        this.delayMaxDays = 90;
         this.members = 20;
         this.mockStorage = await MockStorage.new();
         this.mockReputation = await MockReputation.new();
@@ -64,7 +64,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
         await this.mockStorage.setBool(utils.soliditySha3("user", "investor",investor5),true);
         await this.mockStorage.setBool(utils.soliditySha3("user", "community",community),true);
 
-        await this.lending.saveInitialParametersToStorage(this.defaultMaxDays, this.tier, this.members,community);
+        await this.lending.saveInitialParametersToStorage(this.delayMaxDays, this.tier, this.members,community);
     });
 
     describe('initializing', function() {
@@ -172,11 +172,14 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             const trueBorrowerReturnAmount = await this.lending.borrowerReturnAmount() // actual returnAmount
             await this.lending.sendTransaction({value: trueBorrowerReturnAmount.div(2), from: borrower}).should.be.fulfilled;
             await this.lending.sendTransaction({value: trueBorrowerReturnAmount.div(5), from: borrower}).should.be.fulfilled;
-
+            var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) + duration.days(this.delayMaxDays + 1);
+            await increaseTimeTo(defaultTime);
+            this.lending.declareProjectDefault({from: owner}).should.be.fulfilled;
+            var state = await this.lending.state();
+            state.should.be.bignumber.equal(Default);
             var calledBurn = await this.mockReputation.burnCalled();
             calledBurn.should.be.equal(true);
-            var delayDays = await this.mockStorage.getUint(utils.soliditySha3("lending.delayDays", this.lending.address));
-            delayDays.toNumber().should.be.equal(10);
+
         })
 
         it('partial payment of the loan should allow to recover contributions')
@@ -503,7 +506,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await this.lending.sendFundsToBorrower({from:owner}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
             const endTime = await this.lending.fundingEndTime()
-            const defaultTime = endTime.add(duration.days(this.lendingDays)).add(duration.days(this.defaultMaxDays));
+            const defaultTime = endTime.add(duration.days(this.lendingDays)).add(duration.days(this.delayMaxDays));
             increaseTimeTo(defaultTime);
             // send invalid transaction to advance time
             await this.lending.sendTransaction({value: 1, from: borrower}).should.be.rejectedWith(EVMRevert);
@@ -511,7 +514,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             var calledBurn = await this.mockReputation.burnCalled();
             calledBurn.should.be.equal(true);
             var delayDays = await this.mockStorage.getUint(utils.soliditySha3("lending.delayDays", this.lending.address));
-            delayDays.toNumber().should.be.equal(this.defaultMaxDays);
+            delayDays.toNumber().should.be.equal(this.delayMaxDays);
             var state = await this.lending.state();
             state.toNumber().should.be.equal(Default);
         });
@@ -521,7 +524,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
             await this.lending.sendFundsToBorrower({from:owner}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            await increaseTimeTo(this.fundingEndTime  + duration.days(this.lendingDays) + duration.days(this.maxDelayDays) - duration.days(1));
+            await increaseTimeTo(this.fundingEndTime  + duration.days(this.lendingDays) + duration.days(this.delayMaxDays) - duration.days(1));
             await this.lending.declareProjectDefault().should.be.rejectedWith(EVMRevert);
         });
     });

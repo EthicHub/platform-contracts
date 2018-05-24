@@ -1,3 +1,5 @@
 ownerUserManager,userManagerInstance.registerInvestor(investor1),46681
 ownerUserManager,userManagerInstance.registerInvestor(investor2),46681
 ownerUserManager,userManagerInstance.registerInvestor(investor3),46681
+investor1,lendingInstance.sendTransaction,96783
+investor2,lendingInstance.sendTransaction,73034

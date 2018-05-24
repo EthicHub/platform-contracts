@@ -47,6 +47,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     bool public ethicHubTeamFeeReclaimed;
     EthicHubReputationInterface reputation = EthicHubReputationInterface(0);
     uint256 public surplusEth;
+    uint256 public returnedEth;
 
     struct Investor {
         uint256 amount;
@@ -63,6 +64,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     event StateChange(uint state);
     event onInitalRateSet(uint rate);
     event onReturnRateSet(uint rate);
+    event onReturnAmount(address indexed borrower, uint amount);
 
     // modifiers
     modifier checkProfileRegistered(string profile) {
@@ -173,7 +175,6 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.AwaitingReturn);
         borrowerReturnEthPerFiatRate = _borrowerReturnEthPerFiatRate;
         emit onReturnRateSet(borrowerReturnEthPerFiatRate);
-
     }
 
     function finishInitialExchangingPeriod(uint256 _initialEthPerFiatRate) external onlyOwner {
@@ -249,11 +250,23 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     function returnBorrowedEth() payable public {
         require(state == LendingState.AwaitingReturn);
         require(borrowerReturnEthPerFiatRate > 0);
-
-        require(msg.value == borrowerReturnAmount());
-        state = LendingState.ContributionReturned;
-        emit StateChange(uint(state));
-        updateReputation();
+        bool projectRepayed = false;
+        uint excessRepayment = 0;
+        uint newReturnedEth = 0;
+        emit onReturnAmount(msg.sender, msg.value);
+        (newReturnedEth, projectRepayed, excessRepayment) = calculatePaymentGoal(
+                                                                                    borrowerReturnAmount(),
+                                                                                    returnedEth,
+                                                                                    msg.value);
+        returnedEth = newReturnedEth;
+        if (projectRepayed == true) {
+            state = LendingState.ContributionReturned;
+            emit StateChange(uint(state));
+            updateReputation();
+        }
+        if (excessRepayment > 0) {
+            msg.sender.transfer(excessRepayment);
+        }
     }
 
     // @notice Function to participate in contribution period
@@ -289,7 +302,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         emit onContribution(newTotalContributed, contributor, msg.value, investorCount);
     }
 
-    function calculatePaymentGoal(uint goal, uint oldTotal, uint contribValue) internal returns(uint, bool, uint) {
+    function calculatePaymentGoal(uint goal, uint oldTotal, uint contribValue) internal pure returns(uint, bool, uint) {
         uint newTotal = oldTotal.add(contribValue);
         bool goalReached = false;
         uint excess = 0;
