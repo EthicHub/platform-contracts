@@ -1,0 +1,12 @@
+ownerUserManager,userManagerInstance.registerInvestor(investor1),46681
+ownerUserManager,userManagerInstance.registerInvestor(investor2),46681
+ownerUserManager,userManagerInstance.registerInvestor(investor3),46681
+investor1,lendingInstance.sendTransaction,91432
+investor2,lendingInstance.sendTransaction,93316
+ownerLending,lendingInstance.finishInitialExchangingPeriod,71689
+ownerLending,lendingInstance.setBorrowerReturnEthPerFiatRate,43815
+borrower,lendingInstance.returnBorrowedEth,133847
+investor1,lendingInstance.reclaimContributionWithInterest,55397
+investor2,lendingInstance.reclaimContributionWithInterest,55397
+ownerLending,lendingInstance.reclaimLocalNodeFee,41441
+ownerLending,lendingInstance.reclaimEthicHubTeamFee,41298

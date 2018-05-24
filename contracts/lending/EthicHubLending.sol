@@ -132,7 +132,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.AwaitingReturn || state == LendingState.AcceptingContributions || state == LendingState.ExchangingToFiat);
         if(state == LendingState.AwaitingReturn) {
             returnBorrowedEth();
-        } else if (state == LendingState.ExchangingToFiat && msg.sender == borrower){
+        } else if (state == LendingState.ExchangingToFiat){
             // borrower can send surplus eth back to contract to avoid paying interest
             sendBackSurplusEth();
         } else {
@@ -141,7 +141,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     }
 
     function sendBackSurplusEth() public payable {
-        require(state == LendingState.ExchangingToFiat && msg.sender == borrower);
+        require(state == LendingState.ExchangingToFiat);
         surplusEth = surplusEth.add(msg.value);
         require(surplusEth <= totalLendingAmount);
         onSurplusSent(msg.value);
