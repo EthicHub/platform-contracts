@@ -20,7 +20,7 @@ const EthicHubBase = artifacts.require('EthicHubBase');
 contract('EthicHubReputation', function ([owner, community, localNode, lendingContract]) {
     beforeEach(async function () {
         //await advanceBlock();
-        this.maxDefaultDays = new BigNumber(100);
+        this.maxDelayDays = new BigNumber(100);
         //10 with 2 decimals
         this.maxReputation = new BigNumber(1000);
         this.reputationStep = new BigNumber(100);
@@ -40,12 +40,12 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
     describe('Community decrement', function() {
         it('should burn 1% per day passed after 100 days max', async function() {
             const initialReputation = this.maxReputation.mul(0.5);
-            for (var defaultDays = 1; defaultDays<=100; defaultDays++) {
-                const newRep = await this.reputation.burnCommunityReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
+            for (var delayDays = 1; delayDays<=100; delayDays++) {
+                const newRep = await this.reputation.burnCommunityReputation(delayDays,this.maxDelayDays, initialReputation).should.be.fulfilled;
                 //console.log("-----");
-                //console.log("DefaultDays: "+defaultDays);
+                //console.log("DelayDays: "+delayDays);
                 //console.log("new rep: " +newRep.toNumber());
-                var expectedRep = initialReputation.sub(initialReputation.mul(defaultDays).div(this.maxDefaultDays)).toNumber();
+                var expectedRep = initialReputation.sub(initialReputation.mul(delayDays).div(this.maxDelayDays)).toNumber();
                 expectedRep = Math.floor(expectedRep);
                 //console.log("expected rep: "+expectedRep)
                 newRep.should.be.bignumber.equal(expectedRep);
@@ -53,16 +53,16 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
 
         });
         it('should burn 10% per day passed after 100 days max', async function() {
-            const defaultDays = new BigNumber(10);
+            const delayDays = new BigNumber(10);
             const initialReputation = this.maxReputation.mul(0.5);
-            const newRep = await this.reputation.burnCommunityReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
-            var expectedRep = initialReputation.sub(initialReputation.mul(defaultDays).div(this.maxDefaultDays)).toNumber();
+            const newRep = await this.reputation.burnCommunityReputation(delayDays,this.maxDelayDays, initialReputation).should.be.fulfilled;
+            var expectedRep = initialReputation.sub(initialReputation.mul(delayDays).div(this.maxDelayDays)).toNumber();
             expectedRep = Math.floor(expectedRep);
             newRep.should.be.bignumber.equal(expectedRep);
         });
         it('should burn 100% per day passed after 100 days max', async function() {
-            const defaultDays = this.maxReputation;
-            const newRep = await this.reputation.burnCommunityReputation(defaultDays,this.maxDefaultDays, 100).should.be.fulfilled;
+            const delayDays = this.maxReputation;
+            const newRep = await this.reputation.burnCommunityReputation(delayDays,this.maxDelayDays, 100).should.be.fulfilled;
             newRep.should.be.bignumber.equal(0);
         });
     });
@@ -132,29 +132,29 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
 
         it('should burn same as commnity, max 1 step (100) ', async function() {
             const initialReputation = this.maxReputation.mul(0.5);
-            var defaultDays = 1;
-            var newRep = await this.reputation.burnLocalNodeReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
-            var decrement = initialReputation.mul(defaultDays).div(this.maxDefaultDays);
+            var delayDays = 1;
+            var newRep = await this.reputation.burnLocalNodeReputation(delayDays,this.maxDelayDays, initialReputation).should.be.fulfilled;
+            var decrement = initialReputation.mul(delayDays).div(this.maxDelayDays);
             var expectedRep = initialReputation.sub(decrement).toNumber();
             expectedRep = Math.floor(expectedRep);
             newRep.should.be.bignumber.equal(expectedRep);
 
-            defaultDays = 10;
-            newRep = await this.reputation.burnLocalNodeReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
-            decrement = initialReputation.mul(defaultDays).div(this.maxDefaultDays);
+            delayDays = 10;
+            newRep = await this.reputation.burnLocalNodeReputation(delayDays,this.maxDelayDays, initialReputation).should.be.fulfilled;
+            decrement = initialReputation.mul(delayDays).div(this.maxDelayDays);
             expectedRep = initialReputation.sub(decrement).toNumber();
             expectedRep = Math.floor(expectedRep);
             newRep.should.be.bignumber.equal(expectedRep);
 
-            defaultDays = 60;
-            newRep = await this.reputation.burnLocalNodeReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
+            delayDays = 60;
+            newRep = await this.reputation.burnLocalNodeReputation(delayDays,this.maxDelayDays, initialReputation).should.be.fulfilled;
             decrement = this.reputationStep;
             expectedRep = initialReputation.sub(decrement).toNumber();
             expectedRep = Math.floor(expectedRep);
             newRep.should.be.bignumber.equal(expectedRep);
 
-            defaultDays = this.maxDefaultDays.add(1);
-            newRep = await this.reputation.burnLocalNodeReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
+            delayDays = this.maxDelayDays.add(1);
+            newRep = await this.reputation.burnLocalNodeReputation(delayDays,this.maxDelayDays, initialReputation).should.be.fulfilled;
             decrement = this.reputationStep;
             expectedRep = initialReputation.sub(decrement).toNumber();
             expectedRep = Math.floor(expectedRep);
@@ -164,8 +164,8 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
 
         it('should not burn less than 0', async function() {
             const initialReputation = new BigNumber(0);
-            var defaultDays = 1;
-            var newRep = await this.reputation.burnLocalNodeReputation(defaultDays,this.maxDefaultDays, initialReputation).should.be.fulfilled;
+            var delayDays = 1;
+            var newRep = await this.reputation.burnLocalNodeReputation(delayDays,this.maxDelayDays, initialReputation).should.be.fulfilled;
 
             newRep.should.be.bignumber.equal(initialReputation);
         });
@@ -176,9 +176,9 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
 
     describe('From storage -> Burn', function() {
         it('Should burn reputation', async function() {
-            await this.mockStorage.setUint(utils.soliditySha3("lending.maxDefaultDays", lendingContract),this.maxDefaultDays);
-            const defaultDays = new BigNumber(1);
-            await this.mockStorage.setUint(utils.soliditySha3("lending.defaultDays", lendingContract),defaultDays);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.maxDelayDays", lendingContract),this.maxDelayDays);
+            const delayDays = new BigNumber(1);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.delayDays", lendingContract),delayDays);
             await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
             await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
             const initialCommunityReputation = new BigNumber(500);
@@ -190,22 +190,22 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
 
             //Community rep
             const rep = await this.reputation.getCommunityReputation(community).should.be.fulfilled;
-            var expectedRep = initialCommunityReputation.sub(initialCommunityReputation.mul(defaultDays).div(this.maxDefaultDays)).toNumber();
+            var expectedRep = initialCommunityReputation.sub(initialCommunityReputation.mul(delayDays).div(this.maxDelayDays)).toNumber();
             expectedRep = Math.floor(expectedRep);
             rep.should.be.bignumber.equal(expectedRep);
 
             //Local Node rep
             var newRep = await this.reputation.getLocalNodeReputation(localNode).should.be.fulfilled;
-            var decrement = initialLocalNodeReputation.mul(defaultDays).div(this.maxDefaultDays);
+            var decrement = initialLocalNodeReputation.mul(delayDays).div(this.maxDelayDays);
             var expectedRep = initialLocalNodeReputation.sub(decrement).toNumber();
             expectedRep = Math.floor(expectedRep);
             newRep.should.be.bignumber.equal(expectedRep);
         });
 
         it('Lending contract should have a community', async function() {
-            await this.mockStorage.setUint(utils.soliditySha3("lending.maxDefaultDays", lendingContract),this.maxDefaultDays);
-            const defaultDays = new BigNumber(1);
-            await this.mockStorage.setUint(utils.soliditySha3("lending.defaultDays", lendingContract),defaultDays);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.maxDelayDays", lendingContract),this.maxDelayDays);
+            const delayDays = new BigNumber(1);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.delayDays", lendingContract),delayDays);
             //await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
             await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
             const initialCommunityReputation = new BigNumber(500);
@@ -217,9 +217,9 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
         });
 
         it('Lending contract should have a localNode', async function() {
-            await this.mockStorage.setUint(utils.soliditySha3("lending.maxDefaultDays", lendingContract),this.maxDefaultDays);
-            const defaultDays = new BigNumber(1);
-            await this.mockStorage.setUint(utils.soliditySha3("lending.defaultDays", lendingContract),defaultDays);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.maxDelayDays", lendingContract),this.maxDelayDays);
+            const delayDays = new BigNumber(1);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.delayDays", lendingContract),delayDays);
             await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
             //await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
             const initialCommunityReputation = new BigNumber(500);
@@ -230,10 +230,10 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             await this.reputation.burnReputation({from: lendingContract}).should.be.rejectedWith(EVMRevert);
         });
 
-        it('Lending should have a maxDefaultDays localNode', async function() {
-            //await this.mockStorage.setUint(utils.soliditySha3("lending.maxDefaultDays", lendingContract),this.maxDefaultDays);
-            const defaultDays = new BigNumber(1);
-            await this.mockStorage.setUint(utils.soliditySha3("lending.defaultDays", lendingContract),defaultDays);
+        it('Lending should have a maxDelayDays localNode', async function() {
+            //await this.mockStorage.setUint(utils.soliditySha3("lending.maxDelayDays", lendingContract),this.maxDelayDays);
+            const delayDays = new BigNumber(1);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.delayDays", lendingContract),delayDays);
             await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
             await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
             const initialCommunityReputation = new BigNumber(500);
@@ -245,9 +245,9 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
         });
 
         it('Lending contract should be in default', async function() {
-            await this.mockStorage.setUint(utils.soliditySha3("lending.maxDefaultDays", lendingContract),this.maxDefaultDays);
-            const defaultDays = new BigNumber(1);
-            //await this.mockStorage.setUint(utils.soliditySha3("lending.defaultDays", lendingContract),defaultDays);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.maxDelayDays", lendingContract),this.maxDelayDays);
+            const delayDays = new BigNumber(1);
+            //await this.mockStorage.setUint(utils.soliditySha3("lending.delayDays", lendingContract),delayDays);
             await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
             await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
             const initialCommunityReputation = new BigNumber(500);
@@ -268,7 +268,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
             await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
-            await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.communityMembers", lendingContract),this.minimumPeopleCommunity);
 
             await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
             await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
@@ -298,7 +298,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
             await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
-            await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.communityMembers", lendingContract),this.minimumPeopleCommunity);
 
             //await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
             await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
@@ -316,7 +316,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
             await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
-            await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.communityMembers", lendingContract),this.minimumPeopleCommunity);
 
             await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
             //await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
@@ -334,7 +334,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             //await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
             await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
-            await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.communityMembers", lendingContract),this.minimumPeopleCommunity);
 
             await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
             await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);
@@ -352,7 +352,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
             await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
             //await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
-            await this.mockStorage.setUint(utils.soliditySha3("lending.borrowers", lendingContract),this.minimumPeopleCommunity);
+            await this.mockStorage.setUint(utils.soliditySha3("lending.communityMembers", lendingContract),this.minimumPeopleCommunity);
 
             await this.mockStorage.setAddress(utils.soliditySha3("lending.community", lendingContract),community);
             await this.mockStorage.setAddress(utils.soliditySha3("lending.localNode", lendingContract),localNode);

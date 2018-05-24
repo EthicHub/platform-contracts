@@ -84,12 +84,13 @@ async function deployedContracts (debug = false) {
 }
 const ownerTruffle = web3.eth.accounts[0];
 const localNode2 = web3.eth.accounts[1];
-const community = web3.eth.accounts[2];
+const borrower = web3.eth.accounts[2];
 const localNode1 = web3.eth.accounts[3];
 const teamEH = web3.eth.accounts[4];
 const investor1 = web3.eth.accounts[5];
 const investor2 = web3.eth.accounts[6];
 const investor3 = web3.eth.accounts[7];
+const community = web3.eth.accounts[8];
 
 contract('EthicHubUser', function() {
     let instances;
@@ -229,7 +230,7 @@ contract('EthicHubLending', function() {
             //Increase the days
             //await increaseTimeTo(latestTime() + duration.days(36));
             transaction = await lendingInstance.returnBorrowedEth({value: borrowerReturnAmount, from: community}).should.be.fulfilled;
-            reportMethodGasUsed('report', 'community', 'lendingInstance.returnBorrowedEth', transaction.tx);
+            reportMethodGasUsed('report', 'borrower', 'lendingInstance.returnBorrowedEth', transaction.tx);
             // Reclaims amounts
             transaction = await lendingInstance.reclaimContributionWithInterest(investor1, {from: investor1}).should.be.fulfilled;
             reportMethodGasUsed('report', 'investor1', 'lendingInstance.reclaimContributionWithInterest', transaction.tx);
@@ -255,14 +256,14 @@ function traceBalancesAllActors() {
     const investor3Balance = utils.fromWei(utils.toBN(web3.eth.getBalance(investor3)));
     const localNodeBalance = utils.fromWei(utils.toBN(web3.eth.getBalance(localNode1)));
     const teamBalance = utils.fromWei(utils.toBN(web3.eth.getBalance(teamEH)));
-    const communityBalance = utils.fromWei(utils.toBN(web3.eth.getBalance(community)));
+    const borrowerBalance = utils.fromWei(utils.toBN(web3.eth.getBalance(borrower)));
     console.log('Owner Contract:' + ownerLendingBalance);
     console.log('Investor 1:' + investor1Balance);
     console.log('Investor 2:' + investor2Balance);
     console.log('Investor 3:' + investor3Balance);
     console.log('Local Node:' + localNodeBalance);
     console.log('Team:' + teamBalance);
-    console.log('Community:' + communityBalance);
+    console.log('borrower:' + borrowerBalance);
 }
 
 function checkLostinTransactions(expected, actual) {

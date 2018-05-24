@@ -26,7 +26,7 @@ const EthicHubLending = artifacts.require('EthicHubLending');
 const MockStorage = artifacts.require('./helper_contracts/MockStorage.sol');
 const MockReputation = artifacts.require('./helper_contracts/MockReputation.sol');
 
-contract('EthicHubLending', function ([owner, borrower, investor, investor2, investor3, investor4, investor5, localNode, ethicHubTeam, wallet]) {
+contract('EthicHubLending', function ([owner, borrower, investor, investor2, investor3, investor4, investor5, localNode, ethicHubTeam, community]) {
     beforeEach(async function () {
         await advanceBlock();
         this.fundingStartTime = latestTime() + duration.days(1);
@@ -62,8 +62,9 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
         await this.mockStorage.setBool(utils.soliditySha3("user", "investor",investor3),true);
         await this.mockStorage.setBool(utils.soliditySha3("user", "investor",investor4),true);
         await this.mockStorage.setBool(utils.soliditySha3("user", "investor",investor5),true);
+        await this.mockStorage.setBool(utils.soliditySha3("user", "community",community),true);
 
-        await this.lending.saveInitialParametersToStorage(this.defaultMaxDays, this.tier, this.members);
+        await this.lending.saveInitialParametersToStorage(this.defaultMaxDays, this.tier, this.members,community);
     });
 
     describe('initializing', function() {
@@ -376,8 +377,8 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
 
             var calledBurn = await this.mockReputation.burnCalled();
             calledBurn.should.be.equal(true);
-            var defaultDays = await this.mockStorage.getUint(utils.soliditySha3("lending.defaultDays", this.lending.address));
-            defaultDays.toNumber().should.be.equal(10);
+            var delayDays = await this.mockStorage.getUint(utils.soliditySha3("lending.delayDays", this.lending.address));
+            delayDays.toNumber().should.be.equal(10);
 
 
         });
@@ -399,25 +400,25 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
     describe('Default', async function() {
         it('should calculate correct time difference', async function() {
             var defaultTime = this.fundingEndTime + duration.days(this.lendingDays);
-            for (var defaultDays = 0; defaultDays <= 10; defaultDays++) {
-                var resultDays = await this.lending.getDefaultDays(defaultTime + duration.days(defaultDays));
-                resultDays.toNumber().should.be.equal(defaultDays);
+            for (var delayDays = 0; delayDays <= 10; delayDays++) {
+                var resultDays = await this.lending.getDelayDays(defaultTime + duration.days(delayDays));
+                resultDays.toNumber().should.be.equal(delayDays);
             }
         });
 
         it('should count half a day as full day', async function() {
             var defaultTime = this.fundingEndTime + duration.days(this.lendingDays);
-            var resultDays = await this.lending.getDefaultDays(defaultTime + duration.days(1.5));
+            var resultDays = await this.lending.getDelayDays(defaultTime + duration.days(1.5));
             resultDays.toNumber().should.be.equal(1);
         });
 
         it('should be 0 days if not yet ended', async function() {
             var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) - duration.seconds(1);
-            var resultDays = await this.lending.getDefaultDays(defaultTime);
+            var resultDays = await this.lending.getDelayDays(defaultTime);
             resultDays.toNumber().should.be.equal(0);
         });
 
-        it('should allow declare project as default if no money returned after maxDefaultDays', async function() {
+        it('should allow declare project as default if no money returned after maxDelayDays', async function() {
             await increaseTimeTo(this.fundingEndTime  - duration.minutes(1))
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
@@ -429,8 +430,8 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             var tx = await this.lending.declareProjectDefault().should.be.fulfilled;
             var calledBurn = await this.mockReputation.burnCalled();
             calledBurn.should.be.equal(true);
-            var defaultDays = await this.mockStorage.getUint(utils.soliditySha3("lending.defaultDays", this.lending.address));
-            defaultDays.toNumber().should.be.equal(this.defaultMaxDays);
+            var delayDays = await this.mockStorage.getUint(utils.soliditySha3("lending.delayDays", this.lending.address));
+            delayDays.toNumber().should.be.equal(this.defaultMaxDays);
             var state = await this.lending.state();
             state.toNumber().should.be.equal(Default);
         });
@@ -439,7 +440,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await increaseTimeTo(this.fundingEndTime  - duration.minutes(1))
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            await increaseTimeTo(this.fundingEndTime  + duration.days(this.lendingDays) + duration.days(this.maxDefaultDays) - duration.days(1));
+            await increaseTimeTo(this.fundingEndTime  + duration.days(this.lendingDays) + duration.days(this.maxDelayDays) - duration.days(1));
             await this.lending.declareProjectDefault().should.be.rejectedWith(EVMRevert);
         });
     });

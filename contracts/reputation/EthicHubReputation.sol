@@ -37,10 +37,10 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
     function burnReputation() external {
         address lendingContract = msg.sender;
         //Get temporal parameters
-        uint maxDefaultDays = ethicHubStorage.getUint(keccak256("lending.maxDefaultDays", lendingContract));
-        require(maxDefaultDays != 0);
-        uint defaultDays = ethicHubStorage.getUint(keccak256("lending.defaultDays", lendingContract));
-        require(defaultDays != 0);
+        uint maxDelayDays = ethicHubStorage.getUint(keccak256("lending.maxDelayDays", lendingContract));
+        require(maxDelayDays != 0);
+        uint delayDays = ethicHubStorage.getUint(keccak256("lending.delayDays", lendingContract));
+        require(delayDays != 0);
 
         //Affected players
         address community = ethicHubStorage.getAddress(keccak256("lending.community", lendingContract));
@@ -52,13 +52,13 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
         //***** Community
         uint previousCommunityReputation = ethicHubStorage.getUint(keccak256("community.reputation", community));
         //Calculation and update
-        uint newCommunityReputation = burnCommunityReputation(defaultDays, maxDefaultDays, previousCommunityReputation);
+        uint newCommunityReputation = burnCommunityReputation(delayDays, maxDelayDays, previousCommunityReputation);
         ethicHubStorage.setUint(keccak256("community.reputation", community), newCommunityReputation);
         emit ReputationUpdated(community, newCommunityReputation);
 
         //***** Local node
         uint previousLocalNodeReputation = ethicHubStorage.getUint(keccak256("localNode.reputation", localNode));
-        uint newLocalNodeReputation = burnLocalNodeReputation(defaultDays, maxDefaultDays, previousLocalNodeReputation);
+        uint newLocalNodeReputation = burnLocalNodeReputation(delayDays, maxDelayDays, previousLocalNodeReputation);
         ethicHubStorage.setUint(keccak256("localNode.reputation", localNode), newLocalNodeReputation);
         emit ReputationUpdated(localNode, newLocalNodeReputation);
 
@@ -87,7 +87,7 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
         emit ReputationUpdated(community, newCommunityReputation);
 
         //***** Local node
-        uint borrowers = ethicHubStorage.getUint(keccak256("lending.borrowers", lendingContract));
+        uint borrowers = ethicHubStorage.getUint(keccak256("lending.communityMembers", lendingContract));
         uint previousLocalNodeReputation = ethicHubStorage.getUint(keccak256("localNode.reputation", localNode));
         uint newLocalNodeReputation = incrementLocalNodeReputation(previousLocalNodeReputation, projectTier, borrowers);
         ethicHubStorage.setUint(keccak256("localNode.reputation", localNode), newLocalNodeReputation);
@@ -114,18 +114,18 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
         }
     }
 
-    function burnLocalNodeReputation(uint defaultDays, uint maxDefaultDays, uint prevReputation) view returns(uint) {
-        uint decrement = prevReputation.mul(defaultDays).div(maxDefaultDays);
-        if (defaultDays < maxDefaultDays && decrement < reputationStep) {
+    function burnLocalNodeReputation(uint delayDays, uint maxDelayDays, uint prevReputation) view returns(uint) {
+        uint decrement = prevReputation.mul(delayDays).div(maxDelayDays);
+        if (delayDays < maxDelayDays && decrement < reputationStep) {
             return prevReputation.sub(decrement);
         } else {
             return prevReputation.sub(reputationStep);
         }
     }
 
-    function burnCommunityReputation(uint defaultDays, uint maxDefaultDays, uint prevReputation) pure returns(uint) {
-        if (defaultDays < maxDefaultDays) {
-            return prevReputation.sub(prevReputation.mul(defaultDays).div(maxDefaultDays));
+    function burnCommunityReputation(uint delayDays, uint maxDelayDays, uint prevReputation) pure returns(uint) {
+        if (delayDays < maxDelayDays) {
+            return prevReputation.sub(prevReputation.mul(delayDays).div(maxDelayDays));
         } else {
             return 0;
         }
