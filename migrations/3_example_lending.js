@@ -31,8 +31,8 @@ function now() {
 
 module.exports = async (deployer, network, accounts) => {
 
-    if (network !== 'ganache' && network !== 'development' && network !== 'develop') {
-        console.log("Skipping example lending on dev networks");
+    if (network === 'main') {
+        console.log("Skipping example lending on main network");
         return;
     }
 
