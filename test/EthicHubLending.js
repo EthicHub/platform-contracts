@@ -390,8 +390,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             var defaultTime = this.lending.fundingEndTime() + duration.days(this.lendingDays) + duration.days(90);
 
             await increaseTimeTo(defaultTime);
-            // send a transaction to make this time increase to take place
-            await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.rejectedWith(EVMRevert);
+
             await web3.eth.sendTransaction({to: owner, value: 1, from: owner});
 
             interest = parseInt((this.lendingInterestRatePercentage * 100) * (this.lendingDays) / (365)) + this.ethichubFee * 100 + this.localNodeFee * 100 ;
@@ -452,7 +451,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             //This should be the edge case : end of funding time + awaiting for return period.
             var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) + duration.days(10);
             await increaseTimeTo(defaultTime);//+ duration.days(1) + duration.minutes(2));//+ duration.seconds(1))
-            await this.lending.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.rejectedWith(EVMRevert);
+            //await this.lending.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.rejectedWith(EVMRevert);
             const trueBorrowerReturnAmount = await this.lending.borrowerReturnAmount() // actual returnAmount
             await this.lending.sendTransaction({value: trueBorrowerReturnAmount, from: borrower}).should.be.fulfilled;
 
@@ -461,18 +460,6 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             var delayDays = await this.mockStorage.getUint(utils.soliditySha3("lending.delayDays", this.lending.address));
             delayDays.toNumber().should.be.equal(10);
 
-
-        });
-
-
-        it('should not allow the retun of different amount', async function() {
-            await increaseTimeTo(this.fundingStartTime  + duration.days(1))
-            await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
-            await this.lending.sendFundsToBorrower({from:owner}).should.be.fulfilled;
-            await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
-            await this.lending.sendTransaction({value: borrowerReturnAmount.sub(1), from: borrower}).should.be.rejectedWith(EVMRevert);
 
         });
 
