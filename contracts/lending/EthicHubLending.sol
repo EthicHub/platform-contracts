@@ -110,17 +110,18 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         state = LendingState.Uninitialized;
     }
 
-    function saveInitialParametersToStorage(uint _maxDefaultDays, uint _tier, uint _communityMembers) external onlyOwner {
-        require(_maxDefaultDays != 0);
+    function saveInitialParametersToStorage(uint _maxDelayDays, uint _tier, uint _communityMembers, address _community) external onlyOwner {
+        require(_maxDelayDays != 0);
         require(state == LendingState.Uninitialized);
         require(_tier > 0);
         require(_communityMembers >= 20);
+        require(ethicHubStorage.getBool(keccak256("user", "community", _community)));
         require(ethicHubStorage.getBool(keccak256("user", "localNode", msg.sender)));
-        ethicHubStorage.setUint(keccak256("lending.maxDefaultDays", this), _maxDefaultDays);
-        ethicHubStorage.setAddress(keccak256("lending.community", this), borrower);
+        ethicHubStorage.setUint(keccak256("lending.maxDelayDays", this), _maxDelayDays);
+        ethicHubStorage.setAddress(keccak256("lending.community", this), _community);
         ethicHubStorage.setAddress(keccak256("lending.localNode", this), msg.sender);
         ethicHubStorage.setUint(keccak256("lending.tier", this), _tier);
-        ethicHubStorage.setUint(keccak256("lending.borrowers", this), _communityMembers);
+        ethicHubStorage.setUint(keccak256("lending.communityMembers", this), _communityMembers);
         tier = _tier;
         state = LendingState.AcceptingContributions;
         emit StateChange(uint(state));
@@ -131,7 +132,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.AwaitingReturn || state == LendingState.AcceptingContributions || state == LendingState.ExchangingToFiat);
         if(state == LendingState.AwaitingReturn) {
             returnBorrowedEth();
-        } else if (state == LendingState.ExchangingToFiat && msg.sender == borrower){
+        } else if (state == LendingState.ExchangingToFiat) {
             // borrower can send surplus eth back to contract to avoid paying interest
             sendBackSurplusEth();
         } else {
@@ -140,7 +141,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     }
 
     function sendBackSurplusEth() public payable {
-        require(state == LendingState.ExchangingToFiat && msg.sender == borrower);
+        require(state == LendingState.ExchangingToFiat);
         surplusEth = surplusEth.add(msg.value);
         require(surplusEth <= totalLendingAmount);
         onSurplusSent(msg.value);
@@ -160,9 +161,9 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
     function declareProjectDefault() external onlyOwner {
         require(state == LendingState.AwaitingReturn);
-        uint maxDefaultDays = ethicHubStorage.getUint(keccak256("lending.maxDefaultDays", this));
-        require(getDefaultDays(now) >= maxDefaultDays);
-        ethicHubStorage.setUint(keccak256("lending.defaultDays", this), maxDefaultDays);
+        uint maxDelayDays = ethicHubStorage.getUint(keccak256("lending.maxDelayDays", this));
+        require(getDelayDays(now) >= maxDelayDays);
+        ethicHubStorage.setUint(keccak256("lending.delayDays", this), maxDelayDays);
         reputation.burnReputation();
         state = LendingState.Default;
         emit StateChange(uint(state));
@@ -283,7 +284,6 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
             totalContributed = totalLendingAmount;
 
-            sendFundsToBorrower();
         }
         if (investors[contributor].amount == 0) {
             investorCount = investorCount.add(1);
@@ -296,19 +296,19 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         emit onContribution(newTotalContributed, contributor, contribValue, investorCount);
     }
 
-    function sendFundsToBorrower() internal {
+    function sendFundsToBorrower() external onlyOwner {
       //Waiting for Exchange
+        require(state == LendingState.AcceptingContributions);
         require(capReached);
-        borrower.transfer(totalContributed);
         state = LendingState.ExchangingToFiat;
         emit StateChange(uint(state));
-
+        borrower.transfer(totalContributed);
     }
 
     function updateReputation() internal {
-        uint defaultDays = getDefaultDays(now);
-        if (defaultDays > 0) {
-            ethicHubStorage.setUint(keccak256("lending.defaultDays", this), defaultDays);
+        uint delayDays = getDelayDays(now);
+        if (delayDays > 0) {
+            ethicHubStorage.setUint(keccak256("lending.delayDays", this), delayDays);
             reputation.burnReputation();
         } else {
             uint successesByTier = ethicHubStorage.getUint(keccak256("community.completedProjectsByTier", this, tier)).add(1);
@@ -317,7 +317,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         }
     }
 
-    function getDefaultDays(uint date) public view returns(uint) {
+    function getDelayDays(uint date) public view returns(uint) {
         uint lendingDaysSeconds = lendingDays * 1 days;
         uint defaultTime = fundingEndTime.add(lendingDaysSeconds);
         if (date < defaultTime) {
@@ -330,12 +330,12 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     // lendingInterestRate with 2 decimal
     // 15 * (lending days)/ 365 + 4% local node fee + 3% LendingDev fee
     function lendingInterestRatePercentage() public view returns(uint256){
-        return annualInterest.mul(interestBaseUint).mul(lendingDays.add(getDefaultDays(now))).div(365).add(localNodeFee.mul(interestBaseUint)).add(ethichubFee.mul(interestBaseUint)).add(interestBasePercent);
+        return annualInterest.mul(interestBaseUint).mul(lendingDays.add(getDelayDays(now))).div(365).add(localNodeFee.mul(interestBaseUint)).add(ethichubFee.mul(interestBaseUint)).add(interestBasePercent);
     }
 
     // lendingInterestRate with 2 decimal
     function investorInterest() public view returns(uint256){
-        return annualInterest.mul(interestBaseUint).mul(lendingDays.add(getDefaultDays(now))).div(365).add(interestBasePercent);
+        return annualInterest.mul(interestBaseUint).mul(lendingDays.add(getDelayDays(now))).div(365).add(interestBasePercent);
     }
 
     function borrowerReturnFiatAmount() public view returns(uint256){
