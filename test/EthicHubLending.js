@@ -416,8 +416,8 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
 
             var calledBurn = await this.mockReputation.burnCalled();
             calledBurn.should.be.equal(true);
-            //var delayDays = await this.mockStorage.getUint(utils.soliditySha3("lending.delayDays", this.lending.address));
-            //delayDays.toNumber().should.be.equal(10);
+            var delayDays = await this.mockStorage.getUint(utils.soliditySha3("lending.delayDays", this.lending.address));
+            delayDays.toNumber().should.be.equal(10);
 
 
         });
@@ -471,8 +471,8 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             var tx = await this.lending.declareProjectDefault().should.be.fulfilled;
             var calledBurn = await this.mockReputation.burnCalled();
             calledBurn.should.be.equal(true);
-            //var delayDays = await this.mockStorage.getUint(utils.soliditySha3("lending.delayDays", this.lending.address));
-            //delayDays.toNumber().should.be.equal(this.defaultMaxDays);
+            var delayDays = await this.mockStorage.getUint(utils.soliditySha3("lending.delayDays", this.lending.address));
+            delayDays.toNumber().should.be.equal(this.defaultMaxDays);
             var state = await this.lending.state();
             state.toNumber().should.be.equal(Default);
         });

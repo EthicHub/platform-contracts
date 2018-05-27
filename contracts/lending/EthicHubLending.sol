@@ -163,6 +163,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.AwaitingReturn);
         uint maxDelayDays = ethicHubStorage.getUint(keccak256("lending.maxDelayDays", this));
         require(getDelayDays(now) >= maxDelayDays);
+        ethicHubStorage.setUint(keccak256("lending.delayDays", this), maxDelayDays);
         reputation.burnReputation(maxDelayDays);
         state = LendingState.Default;
         emit StateChange(uint(state));
@@ -307,6 +308,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     function updateReputation() internal {
         uint delayDays = getDelayDays(now);
         if (delayDays > 0) {
+            ethicHubStorage.setUint(keccak256("lending.delayDays", this), delayDays);
             reputation.burnReputation(delayDays);
         } else {
             uint successesByTier = ethicHubStorage.getUint(keccak256("community.completedProjectsByTier", this, tier)).add(1);
