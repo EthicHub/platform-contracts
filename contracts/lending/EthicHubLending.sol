@@ -311,9 +311,9 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
             ethicHubStorage.setUint(keccak256("lending.delayDays", this), delayDays);
             reputation.burnReputation(delayDays);
         } else {
-            uint successesByTier = ethicHubStorage.getUint(keccak256("community.completedProjectsByTier", this, tier)).add(1);
-            ethicHubStorage.setUint(keccak256("community.completedProjectsByTier", this, tier), successesByTier);
-            reputation.incrementReputation();
+            uint completedProjectsByTier  = ethicHubStorage.getUint(keccak256("community.completedProjectsByTier", this, tier)).add(1);
+            ethicHubStorage.setUint(keccak256("community.completedProjectsByTier", this, tier), completedProjectsByTier);
+            reputation.incrementReputation(completedProjectsByTier);
         }
     }
 

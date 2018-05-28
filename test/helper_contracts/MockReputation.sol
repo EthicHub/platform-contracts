@@ -11,7 +11,7 @@ contract MockReputation is EthicHubReputationInterface {
         burnCalled = true;
     }
 
-    function incrementReputation() external {
+    function incrementReputation(uint completedProjectsByTier) external {
         incrementCalled = true;
     }
 

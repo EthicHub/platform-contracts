@@ -63,7 +63,7 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
 
     }
 
-    function incrementReputation() external {
+    function incrementReputation(uint completedProjectsByTier) external {
         address lendingContract = msg.sender;
         //Affected players
         address community = ethicHubStorage.getAddress(keccak256("lending.community", lendingContract));
@@ -75,13 +75,12 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
         //Tier
         uint projectTier = ethicHubStorage.getUint(keccak256("lending.tier", lendingContract));
         require(projectTier > 0);
-        uint succesfulProjectsInTier = ethicHubStorage.getUint(keccak256("community.completedProjectsByTier",lendingContract, projectTier));
-        require(succesfulProjectsInTier > 0);
+        require(completedProjectsByTier > 0);
 
         //***** Community
         uint previousCommunityReputation = ethicHubStorage.getUint(keccak256("community.reputation", community));
         //Calculation and update
-        uint newCommunityReputation = incrementCommunityReputation(previousCommunityReputation, succesfulProjectsInTier);
+        uint newCommunityReputation = incrementCommunityReputation(previousCommunityReputation, completedProjectsByTier);
         ethicHubStorage.setUint(keccak256("community.reputation", community), newCommunityReputation);
         emit ReputationUpdated(community, newCommunityReputation);
 
@@ -93,9 +92,9 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
         emit ReputationUpdated(localNode, newLocalNodeReputation);
     }
 
-    function incrementCommunityReputation(uint previousReputation, uint succesfulSametierProjects) view returns(uint) {
-        require(succesfulSametierProjects > 0);
-        uint nextRep = previousReputation.add(reputationStep / succesfulSametierProjects);
+    function incrementCommunityReputation(uint previousReputation, uint completedProjectsByTier) view returns(uint) {
+        require(completedProjectsByTier > 0);
+        uint nextRep = previousReputation.add(reputationStep / completedProjectsByTier);
         if (nextRep >= maxReputation) {
             return maxReputation;
         } else {
