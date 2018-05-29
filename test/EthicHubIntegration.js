@@ -186,7 +186,7 @@ contract('EthicHubLending', function() {
         lendingContractAddress.should.be.equal(lendingInstance.address);
     });
     describe('The investment flow', function() {
-        it.only('investment reaches goal', async function() {
+        it('investment reaches goal', async function() {
 
             await increaseTimeTo(latestTime() + duration.days(1));
             // Some initial parameters
@@ -288,7 +288,7 @@ contract('EthicHubLending', function() {
             const communityAddress = await storageInstance.getUint(utils.soliditySha3("lending.community",lendingInstance.address));
             console.log('Community Address: ' + communityAddress);
             console.log('Community Address: ' + community);
-            communityAddress.should.be.equal(community.address);
+            communityAddress.toString().should.be.equal(community);
             //const communityRep = await reputationInstance.getCommunityReputation(community);
             const communityRep = await storageInstance.getUint(utils.soliditySha3("community.reputation",community));
             console.log('Final Community Reputation: ' + communityRep);
@@ -510,11 +510,13 @@ contract('EthicHubLending declared default', function() {
             communityRepWallet//community rep wallet
         )
 
+
+
     })
 
 
     describe('declared project default', function() {
-        it('declared project default', async function() {
+        it.only('declared project default', async function() {
             let lendingContractAddress = await storageInstance.getAddress(utils.soliditySha3("contract.address", lendingInstance.address));
             lendingContractAddress.should.be.equal(lendingInstance.address);
             await increaseTimeTo(latestTime() + duration.days(1));
@@ -589,7 +591,7 @@ contract('EthicHubLending declared default', function() {
 
 
             const fundingEndTime = await lendingInstance.fundingEndTime()
-            await increaseTimeTo(fundingEndTime + duration.minutes(1));
+            await increaseTimeTo(fundingEndTime.add(duration.minutes(1)));
 
             await lendingInstance.sendFundsToBorrower({from:ownerTruffle}).should.be.fulfilled;
             await lendingInstance.finishInitialExchangingPeriod(initialEthPerFiatRate, {from: ownerTruffle}).should.be.fulfilled;
@@ -597,7 +599,8 @@ contract('EthicHubLending declared default', function() {
             const borrowerReturnAmount = await lendingInstance.borrowerReturnAmount();
 
             //This should be the edge case : end of funding time + awaiting for return period.
-            var defaultTime = fundingEndTime + duration.days(this.lendingDays) + duration.days(2) + duration.minutes(1);
+            var defaultTime = fundingEndTime.add(duration.days(4)).add(duration.days(1));
+            console.log(defaultTime )
             await increaseTimeTo(defaultTime);//+ duration.days(1) + duration.minutes(2));//+ duration.seconds(1))
             await lendingInstance.sendTransaction({value: borrowerReturnAmount, from: community}).should.be.rejectedWith(EVMRevert);
             /*
@@ -608,13 +611,13 @@ contract('EthicHubLending declared default', function() {
             await lendingInstance.declareProjectDefault({from: ownerLending}).should.be.fulfilled;
 
             var lendingDelayDays = await storageInstance.getUint(utils.soliditySha3("lending.delayDays", lendingInstance.address));
-            lendingDelayDays.toNumber().should.be.equal(duration.days(2));
+            lendingDelayDays.toNumber().should.be.equal(2);
 
             const finalLocalNodeReputation = await reputationInstance.getLocalNodeReputation(localNode1).should.be.fulfilled;
 
             const finalCommunityReputation = await reputationInstance.getCommunityReputation(community).should.be.fulfilled;
-            finalLocalNodeReputation.toNumber().should.be.equal(initialLocalNodeReputation);
-            finalCommunityReputation.toNumber().should.be.equal(initialCommunityReputation);
+            finalLocalNodeReputation.toNumber().should.be.equal(initialLocalNodeReputation.toNumber());
+            finalCommunityReputation.toNumber().should.be.equal(initialCommunityReputation.toNumber());
 
         })
     })
