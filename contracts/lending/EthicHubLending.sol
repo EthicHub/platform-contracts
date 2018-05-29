@@ -71,6 +71,12 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         _;
     }
 
+    modifier onlyOwnerOrLocalNode(string profile) {
+        bool isLocalNode = ethicHubStorage.getBool(keccak256("user", profile, msg.sender));
+        require(isLocalNode || owner == msg.sender);
+        _;
+    }
+
     function EthicHubLending(
         uint _fundingStartTime,
         uint _fundingEndTime,
@@ -110,7 +116,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         state = LendingState.Uninitialized;
     }
 
-    function saveInitialParametersToStorage(uint _maxDelayDays, uint _tier, uint _communityMembers, address _community) external onlyOwner {
+    function saveInitialParametersToStorage(uint _maxDelayDays, uint _tier, uint _communityMembers, address _community) external onlyOwnerOrLocalNode('localNode') {
         require(_maxDelayDays != 0);
         require(state == LendingState.Uninitialized);
         require(_tier > 0);
