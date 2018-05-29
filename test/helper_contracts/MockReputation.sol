@@ -7,7 +7,7 @@ contract MockReputation is EthicHubReputationInterface {
     bool public burnCalled = false;
     bool public incrementCalled = false;
 
-    function burnReputation() external {
+    function burnReputation(uint delayDays) external {
         burnCalled = true;
     }
 

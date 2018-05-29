@@ -34,12 +34,11 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
       version = 1;
     }
 
-    function burnReputation() external {
+    function burnReputation(uint delayDays) external {
         address lendingContract = msg.sender;
         //Get temporal parameters
         uint maxDelayDays = ethicHubStorage.getUint(keccak256("lending.maxDelayDays", lendingContract));
         require(maxDelayDays != 0);
-        uint delayDays = ethicHubStorage.getUint(keccak256("lending.delayDays", lendingContract));
         require(delayDays != 0);
 
         //Affected players
