@@ -122,10 +122,10 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(_tier > 0);
         require(_communityMembers >= 20);
         require(ethicHubStorage.getBool(keccak256("user", "community", _community)));
-        require(ethicHubStorage.getBool(keccak256("user", "localNode", msg.sender)));
+        require(ethicHubStorage.getBool(keccak256("user", "localNode", localNode)));
         ethicHubStorage.setUint(keccak256("lending.maxDelayDays", this), _maxDelayDays);
         ethicHubStorage.setAddress(keccak256("lending.community", this), _community);
-        ethicHubStorage.setAddress(keccak256("lending.localNode", this), msg.sender);
+        ethicHubStorage.setAddress(keccak256("lending.localNode", this), localNode);
         ethicHubStorage.setUint(keccak256("lending.tier", this), _tier);
         ethicHubStorage.setUint(keccak256("lending.communityMembers", this), _communityMembers);
         tier = _tier;
