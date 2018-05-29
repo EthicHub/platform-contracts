@@ -231,7 +231,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     function reclaimLocalNodeFee() external {
         require(state == LendingState.ContributionReturned);
         require(localNodeFeeReclaimed == false);
-        uint256 fee = borrowerReturnAmount().mul(localNodeFee).mul(interestBaseUint).div(lendingInterestRatePercentage());
+        uint256 fee = totalLendingFiatAmount.mul(localNodeFee).mul(interestBaseUint).div(interestBasePercent).div(borrowerReturnEthPerFiatRate);
         require(fee > 0);
         localNodeFeeReclaimed = true;
         localNode.transfer(fee);
@@ -240,7 +240,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     function reclaimEthicHubTeamFee() external {
         require(state == LendingState.ContributionReturned);
         require(ethicHubTeamFeeReclaimed == false);
-        uint256 fee = borrowerReturnAmount().mul(ethichubFee).mul(interestBaseUint).div(lendingInterestRatePercentage());
+        uint256 fee = totalLendingFiatAmount.mul(ethichubFee).mul(interestBaseUint).div(interestBasePercent).div(borrowerReturnEthPerFiatRate);
         require(fee > 0);
         ethicHubTeamFeeReclaimed = true;
         ethicHubTeam.transfer(fee);
