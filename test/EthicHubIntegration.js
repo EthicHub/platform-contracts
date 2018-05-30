@@ -589,6 +589,7 @@ contract('EthicHubLendingNotFunded', function() {
 
 
 contract('EthicHubLending not returned on time', function() {
+    //TODO
 })
 
 contract('EthicHubLending declared default', function() {
@@ -711,7 +712,6 @@ contract('EthicHubLending declared default', function() {
 
             //This should be the edge case : end of funding time + awaiting for return period.
             var defaultTime = fundingEndTime.add(duration.days(4)).add(duration.days(1));
-            console.log(defaultTime)
             await increaseTimeTo(defaultTime);//+ duration.days(1) + duration.minutes(2));//+ duration.seconds(1))
             await lendingInstance.sendTransaction({value: borrowerReturnAmount, from: community}).should.be.rejectedWith(EVMRevert);
             /*
@@ -732,9 +732,8 @@ contract('EthicHubLending declared default', function() {
 })
 
 contract('EthicHubLending with surplus', function() {
+    //TODO
 })
-
-
 
 function traceBalancesAllActors() {
     const ownerBalance = utils.fromWei(utils.toBN(web3.eth.getBalance(ownerTruffle)));
