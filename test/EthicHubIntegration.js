@@ -775,7 +775,7 @@ function getTransactionCost(txHash) {
 
 function reportMethodGasUsed (filename, role, methodName, txHash, remove = false) {
     if (remove)
-        fs.unlinkSync(filename + '.csv');
+        fs.openSync(filename + '.csv', 'w');
     const gasUsed = web3.eth.getTransactionReceipt(txHash).gasUsed;
     fs.appendFileSync(filename + '.csv', role + ',' + methodName + ',' + gasUsed + '\n');
 }
