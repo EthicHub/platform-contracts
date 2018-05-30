@@ -71,7 +71,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
     });
 
     describe('initializing', function() {
-        it.only('should not allow to invest before initializing', async function () {
+        it('should not allow to invest before initializing', async function () {
             //await advanceBlock();
             var someLending = await EthicHubLending.new(
                                                     this.fundingStartTime,
