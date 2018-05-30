@@ -86,7 +86,6 @@ async function deployedContracts (debug = false) {
         storage.deployed(),
         userManager.deployed(),
         reputation.deployed(),
-        lending.deployed(),
         cmc.deployed()
     ]);
     return instances;
@@ -170,13 +169,39 @@ contract('EthicHubLending (Lending owner != LocalNode)', function() {
     let lendingInstance;
     let ownerLending;
     //let web3Contract;
+    let cmcInstance;
     before(async () => {
         await advanceBlock();
         instances = await deployedContracts();
         storageInstance = instances[0];
         userManagerInstance = instances[1];
         reputationInstance = instances[2];
-        lendingInstance = instances[3];
+        cmcInstance = instances[3];
+        // register first LocalNode necessary on lending contract
+        await userManagerInstance.registerLocalNode(localNode1);
+        lendingInstance = await lending.new(
+            //Arguments
+            latestTime() + duration.days(1),//_fundingStartTime
+            latestTime() + duration.days(35),//_fundingEndTime
+            community,//_representative
+            10,//_annualInterest
+            ether(1),//_totalLendingAmount
+            2,//_lendingDays
+            storage.address, //_storageAddress
+            localNode1,
+            teamEH
+        )
+        await userManagerInstance.registerCommunity(community);
+        //Gives set permissions on storage
+        await cmcInstance.addNewLendingContract(lendingInstance.address);
+        console.log("--> EthicHubLending deployed");
+        //Lending saves parameters in storage, checks if owner is localNode
+        await lendingInstance.saveInitialParametersToStorage(
+            2,//maxDefaultDays
+            1,//tier
+            20,//community members
+            community//community rep wallet
+        )
         ownerLending = await new lendingInstance.owner();
         //web3Contract = web3.eth.contract(lendingInstance.abi).at(lendingInstance.address);
         //ownerLending = web3Contract._eth.coinbase;
@@ -290,8 +315,9 @@ contract('EthicHubLending (Lending owner == LocalNode)', function() {
         storageInstance = instances[0];
         userManagerInstance = instances[1];
         reputationInstance = instances[2];
-        cmcInstance = instances[4];
-
+        cmcInstance = instances[3];
+        // register first LocalNode necessary on lending contract
+        await userManagerInstance.registerLocalNode(localNode2);
         lendingInstance = await lending.new(
             //Arguments
             latestTime() + duration.days(1),//_fundingStartTime
@@ -304,7 +330,6 @@ contract('EthicHubLending (Lending owner == LocalNode)', function() {
             localNode2,
             teamEH
         )
-        await userManagerInstance.registerLocalNode(localNode2);
         await userManagerInstance.registerCommunity(community);
         //Gives set permissions on storage
         await cmcInstance.addNewLendingContract(lendingInstance.address, {from: localNode2});
@@ -432,7 +457,9 @@ contract('EthicHubLending (LocalNode not exists)', function() {
             storageInstance = instances[0];
             userManagerInstance = instances[1];
             reputationInstance = instances[2];
-            cmcInstance = instances[4];
+            cmcInstance = instances[3];
+            // register first LocalNode necessary on lending contract
+            await userManagerInstance.registerLocalNode(localNode1);
             lendingInstance = await lending.new(
                 //Arguments
                 latestTime() + duration.days(1),//_fundingStartTime
@@ -445,7 +472,6 @@ contract('EthicHubLending (LocalNode not exists)', function() {
                 localNode1,
                 teamEH
             )
-            await userManagerInstance.registerLocalNode(localNode1);
             await userManagerInstance.registerCommunity(community);
             //Gives set permissions on storage
             await cmcInstance.addNewLendingContract(lendingInstance.address, {from: localNode2}).should.be.rejectedWith(EVMRevert)
@@ -480,7 +506,9 @@ contract('EthicHubLendingNotFunded', function() {
         storageInstance = instances[0];
         userManagerInstance = instances[1];
         reputationInstance = instances[2];
-        cmcInstance = instances[4];
+        cmcInstance = instances[3];
+        // register first LocalNode necessary on lending contract
+        await userManagerInstance.registerLocalNode(localNode1);
         lendingInstance = await lending.new(
             //Arguments
             latestTime() + duration.days(1),//_fundingStartTime
@@ -493,7 +521,6 @@ contract('EthicHubLendingNotFunded', function() {
             localNode1,
             teamEH 
         )
-        await userManagerInstance.registerLocalNode(localNode1);
         await userManagerInstance.registerCommunity(community);
         //Gives set permissions on storage
         await cmcInstance.addNewLendingContract(lendingInstance.address);
@@ -609,8 +636,10 @@ contract('EthicHubLending declared default', function() {
         storageInstance = instances[0];
         userManagerInstance = instances[1];
         reputationInstance = instances[2];
-        cmcInstance = instances[4];
+        cmcInstance = instances[3];
         lendingStartTime = latestTime() + duration.days(1);
+        // register first LocalNode necessary on lending contract
+        await userManagerInstance.registerLocalNode(localNode1);
         lendingInstance = await lending.new(
             //Arguments
             lendingStartTime,//_fundingStartTime
@@ -623,7 +652,6 @@ contract('EthicHubLending declared default', function() {
             localNode1,
             teamEH 
         )
-        await userManagerInstance.registerLocalNode(localNode1);
         await userManagerInstance.registerCommunity(community);
         //Gives set permissions on storage
         await cmcInstance.addNewLendingContract(lendingInstance.address);
