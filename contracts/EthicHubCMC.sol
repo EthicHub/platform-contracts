@@ -16,8 +16,8 @@ contract EthicHubCMC is EthicHubBase, Ownable {
         uint256 created                                         // Creation timestamp
     );
 
-    modifier onlyOwnerOrLocalNode(string profile) {
-        bool isLocalNode = ethicHubStorage.getBool(keccak256("user", profile, msg.sender));
+    modifier onlyOwnerOrLocalNode() {
+        bool isLocalNode = ethicHubStorage.getBool(keccak256("user", "localNode", msg.sender));
         require(isLocalNode || owner == msg.sender);
         _;
     }
@@ -32,7 +32,7 @@ contract EthicHubCMC is EthicHubBase, Ownable {
         ethicHubStorage.setAddress(keccak256("contract.address", _address), _address);
     } */
 
-    function addNewLendingContract(address _lendingAddress) public onlyOwnerOrLocalNode ('localNode') {
+    function addNewLendingContract(address _lendingAddress) public onlyOwnerOrLocalNode {
         //create current reputation address
         ethicHubStorage.setAddress(keccak256("contract.address", _lendingAddress), _lendingAddress);
     }

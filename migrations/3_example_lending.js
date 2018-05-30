@@ -35,8 +35,11 @@ module.exports = async (deployer, network, accounts) => {
         console.log("Skipping example lending on main network");
         return;
     }
-
+    return
     const localNode = accounts[3]
+    userManagerInstance = await userManager.deployed();
+    await userManagerInstance.registerLocalNode(localNode);
+
     const community = accounts[8]
     console.log("--> Deploying EthicHubLending(Owner)...");
     return deployer.deploy(
@@ -56,7 +59,7 @@ module.exports = async (deployer, network, accounts) => {
 
             userManagerInstance = await userManager.deployed();
             cmcInstance = await cmc.deployed();
-            await userManagerInstance.registerLocalNode(localNode);
+
             await userManagerInstance.registerCommunity(community);
             //Gives set permissions on storage deploy localNode
             await cmcInstance.addNewLendingContract(lendingInstance.address);
