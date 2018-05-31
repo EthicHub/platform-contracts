@@ -34,12 +34,11 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
       version = 1;
     }
 
-    function burnReputation() external {
+    function burnReputation(uint delayDays) external {
         address lendingContract = msg.sender;
         //Get temporal parameters
         uint maxDelayDays = ethicHubStorage.getUint(keccak256("lending.maxDelayDays", lendingContract));
         require(maxDelayDays != 0);
-        uint delayDays = ethicHubStorage.getUint(keccak256("lending.delayDays", lendingContract));
         require(delayDays != 0);
 
         //Affected players
@@ -64,7 +63,7 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
 
     }
 
-    function incrementReputation() external {
+    function incrementReputation(uint completedProjectsByTier) external {
         address lendingContract = msg.sender;
         //Affected players
         address community = ethicHubStorage.getAddress(keccak256("lending.community", lendingContract));
@@ -76,13 +75,12 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
         //Tier
         uint projectTier = ethicHubStorage.getUint(keccak256("lending.tier", lendingContract));
         require(projectTier > 0);
-        uint succesfulProjectsInTier = ethicHubStorage.getUint(keccak256("community.completedProjectsByTier",lendingContract, projectTier));
-        require(succesfulProjectsInTier > 0);
+        require(completedProjectsByTier > 0);
 
         //***** Community
         uint previousCommunityReputation = ethicHubStorage.getUint(keccak256("community.reputation", community));
         //Calculation and update
-        uint newCommunityReputation = incrementCommunityReputation(previousCommunityReputation, succesfulProjectsInTier);
+        uint newCommunityReputation = incrementCommunityReputation(previousCommunityReputation, completedProjectsByTier);
         ethicHubStorage.setUint(keccak256("community.reputation", community), newCommunityReputation);
         emit ReputationUpdated(community, newCommunityReputation);
 
@@ -94,9 +92,9 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
         emit ReputationUpdated(localNode, newLocalNodeReputation);
     }
 
-    function incrementCommunityReputation(uint previousReputation, uint succesfulSametierProjects) view returns(uint) {
-        require(succesfulSametierProjects > 0);
-        uint nextRep = previousReputation.add(reputationStep / succesfulSametierProjects);
+    function incrementCommunityReputation(uint previousReputation, uint completedProjectsByTier) view returns(uint) {
+        require(completedProjectsByTier > 0);
+        uint nextRep = previousReputation.add(reputationStep / completedProjectsByTier);
         if (nextRep >= maxReputation) {
             return maxReputation;
         } else {
@@ -115,6 +113,9 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
     }
 
     function burnLocalNodeReputation(uint delayDays, uint maxDelayDays, uint prevReputation) view returns(uint) {
+        if (delayDays == maxDelayDays){
+            return 0;
+        }
         uint decrement = prevReputation.mul(delayDays).div(maxDelayDays);
         if (delayDays < maxDelayDays && decrement < reputationStep) {
             return prevReputation.sub(decrement);

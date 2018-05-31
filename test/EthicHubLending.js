@@ -45,6 +45,8 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
         this.mockStorage = await MockStorage.new();
         this.mockReputation = await MockReputation.new();
         await this.mockStorage.setAddress(utils.soliditySha3("contract.name", "reputation"),this.mockReputation.address);
+        await this.mockStorage.setBool(utils.soliditySha3("user", "localNode",localNode),true);
+
         this.lending = await EthicHubLending.new(
                                                 this.fundingStartTime,
                                                 this.fundingEndTime,
@@ -56,7 +58,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
                                                 localNode,
                                                 ethicHubTeam
                                             );
-        await this.mockStorage.setBool(utils.soliditySha3("user", "localNode",owner),true);
+
         await this.mockStorage.setBool(utils.soliditySha3("user", "investor",investor),true);
         await this.mockStorage.setBool(utils.soliditySha3("user", "investor",investor2),true);
         await this.mockStorage.setBool(utils.soliditySha3("user", "investor",investor3),true);
@@ -69,6 +71,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
 
     describe('initializing', function() {
         it('should not allow to invest before initializing', async function () {
+            //await advanceBlock();
             var someLending = await EthicHubLending.new(
                                                     this.fundingStartTime,
                                                     this.fundingEndTime,

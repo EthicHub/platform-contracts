@@ -31,41 +31,44 @@ function now() {
 
 module.exports = async (deployer, network, accounts) => {
 
-    if (network !== 'ganache' && network !== 'development' && network !== 'develop') {
-        console.log("Skipping example lending on dev networks");
+    if (network === 'main') {
+        console.log("Skipping example lending on main network");
         return;
     }
+    const localNode = accounts[3]
+    userManagerInstance = await userManager.deployed();
+    await userManagerInstance.registerLocalNode(localNode);
 
-    console.log("--> Deploying EthicHubLending...");
+    const community = accounts[8]
+    console.log("--> Deploying EthicHubLending(Owner)...");
     return deployer.deploy(
         lending,
         //Arguments
         now() + duration.days(1),//_fundingStartTime
         now() + duration.days(35),//_fundingEndTime
-        accounts[2],//_representative
+        accounts[2],//_borrower
         10,//_annualInterest
         ether(1),//_totalLendingAmount
         2,//_lendingDays
         storage.address, //_storageAddress
-        accounts[3],//localNode
+        localNode,//localNode
         accounts[4]//team
     ).then(() => {
         return lending.deployed().then(async (lendingInstance) => {
 
             userManagerInstance = await userManager.deployed();
             cmcInstance = await cmc.deployed();
-            //Using accounts [0] because is the only one unlocked by truffle migrate
-            await userManagerInstance.changeUserStatus(accounts[0],"localNode",true);
-            await userManagerInstance.changeUserStatus(accounts[8],"community",true);
-            //Gives set permissions on storage
+
+            await userManagerInstance.registerCommunity(community);
+            //Gives set permissions on storage deploy localNode
             await cmcInstance.addNewLendingContract(lendingInstance.address);
             console.log("--> EthicHubLending deployed");
-            //Lending saves parameters in storage, checks if owner is localNode
+            //Lending saves parameters in storage
             await lendingInstance.saveInitialParametersToStorage(
                 2,//maxDefaultDays
                 1,//tier
                 20,//community members
-                accounts[8]//community rep wallet
+                community //community rep wallet
             )
             console.log("--> EthicHub network ready");
         });
