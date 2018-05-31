@@ -197,6 +197,22 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     }
 
     /**
+     * Method to reclaim contribution after project is declared default (% of partial funds)
+     * @param  beneficiary the contributor
+     *
+     */
+    function reclaimContributionDefault(address beneficiary) external {
+        require(state == LendingState.Default);
+        uint256 investorAmount = investors[beneficiary].amount;
+        // contribution = contribution * partial_funds / total_funds
+        uint256 contribution = investorAmount.mul(totalContributed).div(totalLendingAmount);
+        require(contribution > 0);
+        require(!investors[beneficiary].isCompensated);
+        investors[beneficiary].isCompensated = true;
+        beneficiary.transfer(contribution);
+    }
+
+    /**
      * Method to reclaim contribution after a project is declared as not funded
      * @param  beneficiary the contributor
      *
