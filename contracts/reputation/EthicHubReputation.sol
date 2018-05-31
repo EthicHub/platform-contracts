@@ -113,7 +113,7 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
     }
 
     function burnLocalNodeReputation(uint delayDays, uint maxDelayDays, uint prevReputation) view returns(uint) {
-        if (delayDays == maxDelayDays){
+        if (delayDays >= maxDelayDays){
             return 0;
         }
         uint decrement = prevReputation.mul(delayDays).div(maxDelayDays);
