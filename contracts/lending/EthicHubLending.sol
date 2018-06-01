@@ -187,7 +187,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(capReached == true);
         require(state == LendingState.ExchangingToFiat);
         initialEthPerFiatRate = _initialEthPerFiatRate;
-        if (surplusEth > 0){
+        if (surplusEth > 0) {
             totalLendingAmount = totalLendingAmount.sub(surplusEth);
         }
         totalLendingFiatAmount = totalLendingAmount.mul(initialEthPerFiatRate);
@@ -205,7 +205,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.Default);
         uint256 investorAmount = investors[beneficiary].amount;
         // contribution = contribution * partial_funds / total_funds
-        uint256 contribution = investorAmount.mul(totalContributed).div(totalLendingAmount);
+        uint256 contribution = investorAmount.mul(returnedEth).div(totalLendingAmount);
         require(contribution > 0);
         require(!investors[beneficiary].isCompensated);
         investors[beneficiary].isCompensated = true;

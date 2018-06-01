@@ -184,50 +184,94 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             calledBurn.should.be.equal(true);
         })
 
-        it.only('partial payment of the loan should allow to recover contributions', async function() {
-            const investorInitialBalance = await web3.eth.getBalance(investor);
-            const investor2InitialBalance = await web3.eth.getBalance(investor2);
+        it('partial payment of the loan should allow to recover contributions', async function() {
             await increaseTimeTo(this.fundingEndTime - duration.minutes(1));
 
-            await this.lending.sendTransaction({value: this.totalLendingAmount.mul(1).div(4), from: investor}).should.be.fulfilled;
-            await this.lending.sendTransaction({value: this.totalLendingAmount.mul(3).div(4), from: investor2}).should.be.fulfilled;
+            const investorInitialBalance = await web3.eth.getBalance(investor);
+            var investorSendAmount = this.totalLendingAmount.mul(1).div(3);
+            var investor1GasGost = new utils.toBN(0);
+            var tx = await this.lending.sendTransaction({value: investorSendAmount, from: investor}).should.be.fulfilled;
+            investor1GasGost = accumulateTxCost(tx,investor1GasGost);
+
+            const investorAfterSendBalance = await web3.eth.getBalance(investor);
+
+            const investor2InitialBalance = await web3.eth.getBalance(investor2);
+            var investor2SendAmount = this.totalLendingAmount.mul(2).div(3);
+            var investor2GasGost = new utils.toBN(0);
+            await this.lending.sendTransaction({value: investor2SendAmount, from: investor2}).should.be.fulfilled;
+            const investor2AfterSendBalance = await web3.eth.getBalance(investor2);
+            investor2GasGost = accumulateTxCost(tx,investor2GasGost);
+
             await this.lending.sendFundsToBorrower({from:owner}).should.be.fulfilled;
+
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            await this.lending.setBorrowerReturnEthPerFiatRate(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
             //This should be the edge case : end of funding time + awaiting for return period.
             var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) + duration.days(10);
-            await increaseTimeTo(defaultTime);//+ duration.days(1) + duration.minutes(2));//+ duration.seconds(1))
-            const trueBorrowerReturnAmount = await this.lending.borrowerReturnAmount() // actual returnAmount
-            await this.lending.sendTransaction({value: trueBorrowerReturnAmount.div(2), from: borrower}).should.be.fulfilled;
-            await this.lending.sendTransaction({value: trueBorrowerReturnAmount.div(5), from: borrower}).should.be.fulfilled;
+            await increaseTimeTo(defaultTime);
+            const trueBorrowerReturnAmount = await this.lending.borrowerReturnAmount()
+            const notFullAmount = trueBorrowerReturnAmount.div(4).mul(3);//0.75
+            await this.lending.sendTransaction({value: notFullAmount, from: borrower}).should.be.fulfilled;
             var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) + duration.days(this.delayMaxDays + 1);
             await increaseTimeTo(defaultTime);
             this.lending.declareProjectDefault({from: owner}).should.be.fulfilled;
             var state = await this.lending.state();
             state.should.be.bignumber.equal(Default);
+
+
+            tx = await this.lending.reclaimContributionDefault(investor, {from: investor}).should.be.fulfilled;
+            investor1GasGost = accumulateTxCost(tx, investor1GasGost);
+            const investorFinalBalance = await web3.eth.getBalance(investor);
+            var expected = investorAfterSendBalance.add(investorSendAmount.div(4).mul(3)).sub(investor1GasGost);
+            checkLostinTransactions(expected,investorFinalBalance);
+
+            tx = await this.lending.reclaimContributionDefault(investor2, {from: investor2}).should.be.fulfilled;
+            investor2GasGost = accumulateTxCost(tx, investor2GasGost);
+            const investor2FinalBalance = await web3.eth.getBalance(investor2);
+            var expected2 = investor2AfterSendBalance.add(investor2SendAmount.div(4).mul(3)).sub(investor2GasGost);
+            checkLostinTransactions(expected2,investor2FinalBalance);
+
+            var calledBurn = await this.mockReputation.burnCalled();
+            calledBurn.should.be.equal(true);
+            var contractBalance = await web3.eth.getBalance(this.lending.address);
+            contractBalance.should.be.bignumber.equal(0);
+
+        })
+
+        it('partial payment of the loan should not allow to recover interest, local node and team fees', async function() {
+            await increaseTimeTo(this.fundingEndTime - duration.minutes(1));
+
+            var investorSendAmount = this.totalLendingAmount.mul(1).div(3);
+            var tx = await this.lending.sendTransaction({value: investorSendAmount, from: investor}).should.be.fulfilled;
+
+
+            await this.lending.sendTransaction({value: investor2SendAmount, from: investor2}).should.be.fulfilled;
+
+            await this.lending.sendFundsToBorrower({from:owner}).should.be.fulfilled;
+
+            await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            await this.lending.setBorrowerReturnEthPerFiatRate(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
             //This should be the edge case : end of funding time + awaiting for return period.
+            var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) + duration.days(10);
+            await increaseTimeTo(defaultTime);
+            const trueBorrowerReturnAmount = await this.lending.borrowerReturnAmount()
+            const notFullAmount = trueBorrowerReturnAmount.div(4).mul(3);//0.75
+            await this.lending.sendTransaction({value: notFullAmount, from: borrower}).should.be.fulfilled;
+            var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) + duration.days(this.delayMaxDays + 1);
+            await increaseTimeTo(defaultTime);
+            this.lending.declareProjectDefault({from: owner}).should.be.fulfilled;
+            var state = await this.lending.state();
+            state.should.be.bignumber.equal(Default);
             // Reclaims amounts
             await this.lending.reclaimContributionWithInterest(investor, {from: investor}).should.be.rejectedWith(EVMRevert);
+
             await this.lending.reclaimContributionWithInterest(investor2, {from: investor2}).should.be.rejectedWith(EVMRevert);
             await this.lending.reclaimLocalNodeFee().should.be.rejectedWith(EVMRevert);
             await this.lending.reclaimEthicHubTeamFee().should.be.rejectedWith(EVMRevert);
-            await this.lending.reclaimContributionDefault(investor, {from: investor}).should.be.fulfilled;
-            //await this.lending.reclaimContributionDefault(investor2, {from: investor2}).should.be.fulfilled;
-            console.log('Total Borrower Amount:' + utils.fromWei(utils.toBN(trueBorrowerReturnAmount.div(2).add(trueBorrowerReturnAmount.div(5))), 'ether'));
-            const totalContributed = trueBorrowerReturnAmount.div(2).add(trueBorrowerReturnAmount.div(5));
-            const investorFinalBalance = await web3.eth.getBalance(investor);
-            const sendInvestorBalance = this.totalLendingAmount.mul(1).div(4);
-            const expectedInvestorBalance = investorFinalBalance.add(sendInvestorBalance.mul(totalContributed).div(this.totalLendingAmount));
-            const investor2FinalBalance = await web3.eth.getBalance(investor2);
-            const sendInvestor2Balance = this.totalLendingAmount.mul(3).div(4);
-            const expectedInvestor2Balance = investor2FinalBalance.add(sendInvestor2Balance.mul(totalContributed).div(this.totalLendingAmount));
-            checkInvestmentResults(investorInitialBalance, sendInvestorBalance, expectedInvestorBalance, investorFinalBalance);
-            checkInvestmentResults(investor2InitialBalance, sendInvestor2Balance, expectedInvestor2Balance, investor2FinalBalance);
-            var calledBurn = await this.mockReputation.burnCalled();
-            calledBurn.should.be.equal(true);
-        })
+        });
 
     });
+
 
     describe('Retrieving contributions', function() {
       it('should allow to retrieve contributions after declaring project not funded', async function () {
@@ -782,6 +826,11 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
                             .div(testEnv.finalEthPerFiatRate).div(10000);
         return initialAmount.sub(contribution).add(received);
 
+    }
+
+    function accumulateTxCost(tx, cost) {
+
+        return cost.add(utils.toBN(tx.receipt.gasUsed).mul(utils.toBN(web3.eth.gasPrice)));
     }
 
     function checkInvestmentResults(investorInitialBalance, sendTransactionBalance, expected, actual) {
