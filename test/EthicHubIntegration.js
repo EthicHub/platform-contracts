@@ -519,7 +519,7 @@ contract('EthicHubLendingNotFunded', function() {
             2,//_lendingDays
             storage.address, //_storageAddress
             localNode1,
-            teamEH 
+            teamEH
         )
         await userManagerInstance.registerCommunity(community);
         //Gives set permissions on storage
@@ -764,7 +764,7 @@ contract('EthicHubLending not returned on time', function() {
 
 })
 
-contract('EthicHubLending declared default', function() {
+contract('EthicHubLending Default ->', function() {
     let instances;
     let storageInstance;
     let lendingInstance;
@@ -795,7 +795,7 @@ contract('EthicHubLending declared default', function() {
             2,//_lendingDays
             storage.address, //_storageAddress
             localNode1,
-            teamEH 
+            teamEH
         )
         await userManagerInstance.registerCommunity(community);
         //Gives set permissions on storage
@@ -886,13 +886,13 @@ contract('EthicHubLending declared default', function() {
             //This should be the edge case : end of funding time + awaiting for return period.
             var defaultTime = fundingEndTime.add(duration.days(4)).add(duration.days(1));
             await increaseTimeTo(defaultTime);//+ duration.days(1) + duration.minutes(2));//+ duration.seconds(1))
-            await lendingInstance.sendTransaction({value: borrowerReturnAmount, from: community}).should.be.rejectedWith(EVMRevert);
             /*
             const trueBorrowerReturnAmount = await this.lending.borrowerReturnAmount() // actual returnAmount
             await this.lending.sendTransaction({value: trueBorrowerReturnAmount, from: borrower}).should.be.fulfilled;
             */
 
             await lendingInstance.declareProjectDefault({from: ownerLending}).should.be.fulfilled;
+            await lendingInstance.sendTransaction({value: borrowerReturnAmount, from: community}).should.be.rejectedWith(EVMRevert);
 
             var lendingDelayDays = await storageInstance.getUint(utils.soliditySha3("lending.delayDays", lendingInstance.address));
             lendingDelayDays.toNumber().should.be.equal(2);

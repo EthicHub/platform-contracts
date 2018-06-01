@@ -155,9 +155,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
 
             delayDays = this.maxDelayDays.add(1);
             newRep = await this.reputation.burnLocalNodeReputation(delayDays,this.maxDelayDays, initialReputation).should.be.fulfilled;
-            decrement = this.reputationStep;
-            expectedRep = initialReputation.sub(decrement).toNumber();
-            expectedRep = Math.floor(expectedRep);
+            expectedRep = new BigNumber(0);
             newRep.should.be.bignumber.equal(expectedRep);
 
         });

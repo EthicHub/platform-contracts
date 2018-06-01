@@ -40,7 +40,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
         this.initialEthPerFiatRate = 400;
         this.finalEthPerFiatRate = 480;
         this.lendingDays = 90;
-        this.defaultMaxDays = 90;
+        this.delayMaxDays = 90;
         this.members = 20;
         this.mockStorage = await MockStorage.new();
         this.mockReputation = await MockReputation.new();
@@ -66,8 +66,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
         await this.mockStorage.setBool(utils.soliditySha3("user", "investor",investor5),true);
         await this.mockStorage.setBool(utils.soliditySha3("user", "community",community),true);
 
-        var tx = await this.lending.saveInitialParametersToStorage(this.defaultMaxDays, this.tier, this.members,community);
-
+        await this.lending.saveInitialParametersToStorage(this.delayMaxDays, this.tier, this.members,community);
     });
 
     describe('initializing', function() {
@@ -147,6 +146,132 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
         });
 
     });
+
+    describe('Partial returning of funds', function() {
+        it('full payment of the loan in several transfers should be allowed', async function() {
+            await increaseTimeTo(this.fundingStartTime  + duration.days(1))
+            await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
+            await this.lending.sendFundsToBorrower({from:owner}).should.be.fulfilled;
+            await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
+            await this.lending.sendTransaction({value: borrowerReturnAmount.div(2), from: borrower}).should.be.fulfilled;
+            await this.lending.sendTransaction({value: borrowerReturnAmount.div(2), from: borrower}).should.be.fulfilled;
+            const state = await this.lending.state();
+            state.should.be.bignumber.equal(ContributionReturned);
+        })
+
+        it('partial payment of the loan should be still default', async function() {
+            await increaseTimeTo(this.fundingEndTime - duration.minutes(1));
+
+            await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
+            await this.lending.sendFundsToBorrower({from:owner}).should.be.fulfilled;
+            await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
+
+            //This should be the edge case : end of funding time + awaiting for return period.
+            var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) + duration.days(10);
+            await increaseTimeTo(defaultTime);//+ duration.days(1) + duration.minutes(2));//+ duration.seconds(1))
+            const trueBorrowerReturnAmount = await this.lending.borrowerReturnAmount() // actual returnAmount
+            await this.lending.sendTransaction({value: trueBorrowerReturnAmount.div(2), from: borrower}).should.be.fulfilled;
+            await this.lending.sendTransaction({value: trueBorrowerReturnAmount.div(5), from: borrower}).should.be.fulfilled;
+            var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) + duration.days(this.delayMaxDays + 1);
+            await increaseTimeTo(defaultTime);
+            this.lending.declareProjectDefault({from: owner}).should.be.fulfilled;
+            var state = await this.lending.state();
+            state.should.be.bignumber.equal(Default);
+            var calledBurn = await this.mockReputation.burnCalled();
+            calledBurn.should.be.equal(true);
+        })
+
+        it('partial payment of the loan should allow to recover contributions', async function() {
+            await increaseTimeTo(this.fundingEndTime - duration.minutes(1));
+
+            const investorInitialBalance = await web3.eth.getBalance(investor);
+            var investorSendAmount = this.totalLendingAmount.mul(1).div(3);
+            var investor1GasGost = new utils.toBN(0);
+            var tx = await this.lending.sendTransaction({value: investorSendAmount, from: investor}).should.be.fulfilled;
+            investor1GasGost = accumulateTxCost(tx,investor1GasGost);
+
+            const investorAfterSendBalance = await web3.eth.getBalance(investor);
+
+            const investor2InitialBalance = await web3.eth.getBalance(investor2);
+            var investor2SendAmount = this.totalLendingAmount.mul(2).div(3);
+            var investor2GasGost = new utils.toBN(0);
+            await this.lending.sendTransaction({value: investor2SendAmount, from: investor2}).should.be.fulfilled;
+            const investor2AfterSendBalance = await web3.eth.getBalance(investor2);
+            investor2GasGost = accumulateTxCost(tx,investor2GasGost);
+
+            await this.lending.sendFundsToBorrower({from:owner}).should.be.fulfilled;
+
+            await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            await this.lending.setBorrowerReturnEthPerFiatRate(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            //This should be the edge case : end of funding time + awaiting for return period.
+            var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) + duration.days(10);
+            await increaseTimeTo(defaultTime);
+            const trueBorrowerReturnAmount = await this.lending.borrowerReturnAmount()
+            const notFullAmount = trueBorrowerReturnAmount.div(4).mul(3);//0.75
+            await this.lending.sendTransaction({value: notFullAmount, from: borrower}).should.be.fulfilled;
+            var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) + duration.days(this.delayMaxDays + 1);
+            await increaseTimeTo(defaultTime);
+            this.lending.declareProjectDefault({from: owner}).should.be.fulfilled;
+            var state = await this.lending.state();
+            state.should.be.bignumber.equal(Default);
+
+
+            tx = await this.lending.reclaimContributionDefault(investor, {from: investor}).should.be.fulfilled;
+            investor1GasGost = accumulateTxCost(tx, investor1GasGost);
+            const investorFinalBalance = await web3.eth.getBalance(investor);
+            var expected = investorAfterSendBalance.add(investorSendAmount.div(4).mul(3)).sub(investor1GasGost);
+            checkLostinTransactions(expected,investorFinalBalance);
+
+            tx = await this.lending.reclaimContributionDefault(investor2, {from: investor2}).should.be.fulfilled;
+            investor2GasGost = accumulateTxCost(tx, investor2GasGost);
+            const investor2FinalBalance = await web3.eth.getBalance(investor2);
+            var expected2 = investor2AfterSendBalance.add(investor2SendAmount.div(4).mul(3)).sub(investor2GasGost);
+            checkLostinTransactions(expected2,investor2FinalBalance);
+
+            var calledBurn = await this.mockReputation.burnCalled();
+            calledBurn.should.be.equal(true);
+            var contractBalance = await web3.eth.getBalance(this.lending.address);
+            contractBalance.should.be.bignumber.equal(0);
+
+        })
+
+        it('partial payment of the loan should not allow to recover interest, local node and team fees', async function() {
+            await increaseTimeTo(this.fundingEndTime - duration.minutes(1));
+
+            var investorSendAmount = this.totalLendingAmount.mul(1).div(3);
+            var tx = await this.lending.sendTransaction({value: investorSendAmount, from: investor}).should.be.fulfilled;
+
+            var investor2SendAmount = this.totalLendingAmount.mul(2).div(3);
+            await this.lending.sendTransaction({value: investor2SendAmount, from: investor2}).should.be.fulfilled;
+
+            await this.lending.sendFundsToBorrower({from:owner}).should.be.fulfilled;
+
+            await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            await this.lending.setBorrowerReturnEthPerFiatRate(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
+            //This should be the edge case : end of funding time + awaiting for return period.
+            var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) + duration.days(10);
+            await increaseTimeTo(defaultTime);
+            const trueBorrowerReturnAmount = await this.lending.borrowerReturnAmount()
+            const notFullAmount = trueBorrowerReturnAmount.div(4).mul(3);//0.75
+            await this.lending.sendTransaction({value: notFullAmount, from: borrower}).should.be.fulfilled;
+            var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) + duration.days(this.delayMaxDays + 1);
+            await increaseTimeTo(defaultTime);
+            this.lending.declareProjectDefault({from: owner}).should.be.fulfilled;
+            var state = await this.lending.state();
+            state.should.be.bignumber.equal(Default);
+            // Reclaims amounts
+            await this.lending.reclaimContributionWithInterest(investor, {from: investor}).should.be.rejectedWith(EVMRevert);
+
+            await this.lending.reclaimContributionWithInterest(investor2, {from: investor2}).should.be.rejectedWith(EVMRevert);
+            await this.lending.reclaimLocalNodeFee().should.be.rejectedWith(EVMRevert);
+            await this.lending.reclaimEthicHubTeamFee().should.be.rejectedWith(EVMRevert);
+        });
+
+    });
+
 
     describe('Retrieving contributions', function() {
       it('should allow to retrieve contributions after declaring project not funded', async function () {
@@ -352,8 +477,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             var defaultTime = this.lending.fundingEndTime() + duration.days(this.lendingDays) + duration.days(90);
 
             await increaseTimeTo(defaultTime);
-            // send a transaction to make this time increase to take place
-            await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.rejectedWith(EVMRevert);
+
             await web3.eth.sendTransaction({to: owner, value: 1, from: owner});
 
             interest = parseInt((this.lendingInterestRatePercentage * 100) * (this.lendingDays) / (365)) + this.ethichubFee * 100 + this.localNodeFee * 100 ;
@@ -414,7 +538,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             //This should be the edge case : end of funding time + awaiting for return period.
             var defaultTime = this.fundingEndTime + duration.days(this.lendingDays) + duration.days(10);
             await increaseTimeTo(defaultTime);//+ duration.days(1) + duration.minutes(2));//+ duration.seconds(1))
-            await this.lending.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.rejectedWith(EVMRevert);
+            //await this.lending.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.rejectedWith(EVMRevert);
             const trueBorrowerReturnAmount = await this.lending.borrowerReturnAmount() // actual returnAmount
             await this.lending.sendTransaction({value: trueBorrowerReturnAmount, from: borrower}).should.be.fulfilled;
 
@@ -423,18 +547,6 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             var delayDays = await this.mockStorage.getUint(utils.soliditySha3("lending.delayDays", this.lending.address));
             delayDays.toNumber().should.be.equal(10);
 
-
-        });
-
-
-        it('should not allow the retun of different amount', async function() {
-            await increaseTimeTo(this.fundingStartTime  + duration.days(1))
-            await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
-            await this.lending.sendFundsToBorrower({from:owner}).should.be.fulfilled;
-            await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            await this.lending.setBorrowerReturnEthPerFiatRate(this.finalEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            const borrowerReturnAmount = await this.lending.borrowerReturnAmount();
-            await this.lending.sendTransaction({value: borrowerReturnAmount.sub(1), from: borrower}).should.be.rejectedWith(EVMRevert);
 
         });
 
@@ -468,7 +580,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await this.lending.sendFundsToBorrower({from:owner}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
             const endTime = await this.lending.fundingEndTime()
-            const defaultTime = endTime.add(duration.days(this.lendingDays)).add(duration.days(this.defaultMaxDays));
+            const defaultTime = endTime.add(duration.days(this.lendingDays)).add(duration.days(this.delayMaxDays));
             increaseTimeTo(defaultTime);
             // send invalid transaction to advance time
             await this.lending.sendTransaction({value: 1, from: borrower}).should.be.rejectedWith(EVMRevert);
@@ -476,7 +588,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             var calledBurn = await this.mockReputation.burnCalled();
             calledBurn.should.be.equal(true);
             var delayDays = await this.mockStorage.getUint(utils.soliditySha3("lending.delayDays", this.lending.address));
-            delayDays.toNumber().should.be.equal(this.defaultMaxDays);
+            delayDays.toNumber().should.be.equal(this.delayMaxDays);
             var state = await this.lending.state();
             state.toNumber().should.be.equal(Default);
         });
@@ -486,7 +598,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             await this.lending.sendTransaction({value: this.totalLendingAmount, from: investor}).should.be.fulfilled;
             await this.lending.sendFundsToBorrower({from:owner}).should.be.fulfilled;
             await this.lending.finishInitialExchangingPeriod(this.initialEthPerFiatRate, {from: owner}).should.be.fulfilled;
-            await increaseTimeTo(this.fundingEndTime  + duration.days(this.lendingDays) + duration.days(this.maxDelayDays) - duration.days(1));
+            await increaseTimeTo(this.fundingEndTime  + duration.days(this.lendingDays) + duration.days(this.delayMaxDays) - duration.days(1));
             await this.lending.declareProjectDefault().should.be.rejectedWith(EVMRevert);
         });
     });
@@ -714,6 +826,11 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
                             .div(testEnv.finalEthPerFiatRate).div(10000);
         return initialAmount.sub(contribution).add(received);
 
+    }
+
+    function accumulateTxCost(tx, cost) {
+
+        return cost.add(utils.toBN(tx.receipt.gasUsed).mul(utils.toBN(web3.eth.gasPrice)));
     }
 
     function checkInvestmentResults(investorInitialBalance, sendTransactionBalance, expected, actual) {
