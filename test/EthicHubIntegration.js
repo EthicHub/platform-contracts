@@ -712,12 +712,6 @@ contract('EthicHubLending Default ->', function() {
             // Investment part
             //Raw transaction in truffle develop. CAUTION the private key is from truffle
             //await rawTransaction(investor1, privateKeys[5], lendingInstance.address, '', investment1).should.be.fulfilled;
-            // Save initial reputation
-            const oldLocalNodeRep = await reputationInstance.getLocalNodeReputation(localNode1);
-            console.log('Init Local Node Reputation: ' + oldLocalNodeRep);
-            const oldCommunityRep = await reputationInstance.getCommunityReputation(community);
-            console.log('Init Community Reputation: ' + oldCommunityRep);
-
             //Send transaction
             transaction = await lendingInstance.sendTransaction({value: investment1, from: investor1}).should.be.fulfilled;
             reportMethodGasUsed('report', 'investor1', 'lendingInstance.sendTransaction', transaction.tx);
@@ -819,8 +813,8 @@ async function checkReputation(localNode, community, initialLocalNodeReputation,
     // Init Reputation
     //const reputationAddress = await storageInstance.getAddress(utils.soliditySha3("contract.name", "reputation"));
     //const reputationInstance = await reputation.at(reputationAddress);
-    console.log('Initial (Community) Reputation: ' + initialCommunityReputation);
-    console.log('Initial (Local Node) Reputation: ' + initialLocalNodeReputation);
+    //console.log('Initial (Community) Reputation: ' + initialCommunityReputation);
+    //console.log('Initial (Local Node) Reputation: ' + initialLocalNodeReputation);
 
     var expectedCommunityRep = initialCommunityReputation;
     var expectedLocalNodeRep = initialLocalNodeReputation;
@@ -828,7 +822,7 @@ async function checkReputation(localNode, community, initialLocalNodeReputation,
     var decrement = 0;
     // Decrement
     if (delayDays > 0){
-        console.log('=== DECREMENT ===');
+        //console.log('=== DECREMENT ===');
         decrement = initialLocalNodeReputation.mul(delayDays).div(maxDelayDays);
         if (delayDays < maxDelayDays && decrement < reputationStep) {
             expectedLocalNodeRep = Math.floor(initialLocalNodeReputation.sub(decrement).toNumber());
@@ -840,7 +834,7 @@ async function checkReputation(localNode, community, initialLocalNodeReputation,
             expectedCommunityRep = 0;
         }
     } else {
-        console.log('=== INCREMENT ===');
+        //console.log('=== INCREMENT ===');
         const completedProjectsByTier = await storageInstance.getUint(utils.soliditySha3("community.completedProjectsByTier",lendingInstance.address, projectTier));
         if (completedProjectsByTier > 0){
             increment = 100 / completedProjectsByTier;
@@ -849,17 +843,17 @@ async function checkReputation(localNode, community, initialLocalNodeReputation,
             expectedLocalNodeRep = initialLocalNodeReputation.add(increment).toNumber();
         }
     }
-    console.log('Exp Community Reputation: ' + expectedCommunityRep);
-    console.log('Exp Local Node Reputation: ' + expectedLocalNodeRep);
+    //console.log('Exp Community Reputation: ' + expectedCommunityRep);
+    //console.log('Exp Local Node Reputation: ' + expectedLocalNodeRep);
     const communityAddress = await storageInstance.getAddress(utils.soliditySha3("lending.community",lendingInstance.address));
     communityAddress.should.be.equal(community);
     const communityRep = await reputationInstance.getCommunityReputation(community);
-    console.log('Final Community Reputation: ' + communityRep);
+    //console.log('Final Community Reputation: ' + communityRep);
     communityRep.should.be.bignumber.equal(expectedCommunityRep);
     const localNodeAddress = await storageInstance.getAddress(utils.soliditySha3("lending.localNode",lendingInstance.address));
     localNodeAddress.should.be.equal(localNode);
     const localNodeRep = await reputationInstance.getLocalNodeReputation(localNode);
-    console.log('Final Local Node Reputation: ' + localNodeRep);
+    //console.log('Final Local Node Reputation: ' + localNodeRep);
     localNodeRep.should.be.bignumber.equal(expectedLocalNodeRep);
 }
 
