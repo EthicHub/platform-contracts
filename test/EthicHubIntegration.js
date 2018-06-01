@@ -183,7 +183,7 @@ contract('EthicHubLending (Lending owner != LocalNode)', function() {
             //Arguments
             latestTime() + duration.days(1),//_fundingStartTime
             latestTime() + duration.days(35),//_fundingEndTime
-            community,//_representative
+            borrower,//_representative
             10,//_annualInterest
             ether(1),//_totalLendingAmount
             2,//_lendingDays
@@ -322,7 +322,7 @@ contract('EthicHubLending (Lending owner == LocalNode)', function() {
             //Arguments
             latestTime() + duration.days(1),//_fundingStartTime
             latestTime() + duration.days(35),//_fundingEndTime
-            community,//_representative
+            borrower,//_representative
             10,//_annualInterest
             ether(1),//_totalLendingAmount
             2,//_lendingDays
@@ -464,7 +464,7 @@ contract('EthicHubLending (LocalNode not exists)', function() {
                 //Arguments
                 latestTime() + duration.days(1),//_fundingStartTime
                 latestTime() + duration.days(35),//_fundingEndTime
-                community,//_representative
+                borrower,//_representative
                 10,//_annualInterest
                 ether(1),//_totalLendingAmount
                 2,//_lendingDays
@@ -513,7 +513,7 @@ contract('EthicHubLendingNotFunded', function() {
             //Arguments
             latestTime() + duration.days(1),//_fundingStartTime
             latestTime() + duration.days(35),//_fundingEndTime
-            community,//_representative
+            borrower,//_representative
             10,//_annualInterest
             ether(10),//_totalLendingAmount
             2,//_lendingDays
@@ -644,7 +644,7 @@ contract('EthicHubLending Default ->', function() {
             //Arguments
             lendingStartTime,//_fundingStartTime
             latestTime() + duration.days(35),//_fundingEndTime
-            community,//_representative
+            borrower,//_representative
             10,//_annualInterest
             ether(4),//_totalLendingAmount
             2,//_lendingDays
@@ -747,7 +747,7 @@ contract('EthicHubLending Default ->', function() {
             */
 
             await lendingInstance.declareProjectDefault({from: ownerLending}).should.be.fulfilled;
-            await lendingInstance.sendTransaction({value: borrowerReturnAmount, from: community}).should.be.rejectedWith(EVMRevert);
+            await lendingInstance.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.rejectedWith(EVMRevert);
 
             var lendingDelayDays = await storageInstance.getUint(utils.soliditySha3("lending.delayDays", lendingInstance.address));
             lendingDelayDays.toNumber().should.be.equal(2);
