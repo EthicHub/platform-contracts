@@ -244,7 +244,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             var investorSendAmount = this.totalLendingAmount.mul(1).div(3);
             var tx = await this.lending.sendTransaction({value: investorSendAmount, from: investor}).should.be.fulfilled;
 
-
+            var investor2SendAmount = this.totalLendingAmount.mul(2).div(3);
             await this.lending.sendTransaction({value: investor2SendAmount, from: investor2}).should.be.fulfilled;
 
             await this.lending.sendFundsToBorrower({from:owner}).should.be.fulfilled;
