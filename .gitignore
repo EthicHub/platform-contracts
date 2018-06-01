@@ -1,3 +1,4 @@
+report.csv
 .DS_Store
 .swo
 # Logs
@@ -68,5 +69,3 @@ typings/
 
 package-lock.json
 build/
-
-
