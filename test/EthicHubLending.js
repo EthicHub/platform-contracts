@@ -695,6 +695,8 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             const investor2InitialBalance = await web3.eth.getBalance(investor2);
             const investor3InitialBalance = await web3.eth.getBalance(investor3);
             const investor4InitialBalance = await web3.eth.getBalance(investor4);
+            const localNodeInitialBalance = await web3.eth.getBalance(localNode);
+            const teamInitialBalance = await web3.eth.getBalance(ethicHubTeam);
 
             await this.lending.sendTransaction({value: investment2, from: investor2}).should.be.fulfilled;
             await this.lending.sendTransaction({value: investment3, from: investor3}).should.be.fulfilled;
@@ -721,11 +723,13 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
 
             const localNodeFinalBalance = await web3.eth.getBalance(localNode);
             const expectedLocalNodeBalance = localNodeBalance.add(this.totalLendingAmount.mul(this.initialEthPerFiatRate).mul(this.localNodeFee).div(this.finalEthPerFiatRate).div(100)) ;
-            checkInvestmentResults(0, 0, expectedLocalNodeBalance, localNodeFinalBalance);
+            //checkInvestmentResults(localNodeInitialBalance, 0, expectedLocalNodeBalance, localNodeFinalBalance);
+            checkLostinTransactions(expectedLocalNodeBalance,localNodeFinalBalance);
 
-            const teamBalanceFinalBalance = await web3.eth.getBalance(ethicHubTeam);
-            const expectedEthicHubTeamBalance = teamBalance.add(this.totalLendingAmount.mul(this.initialEthPerFiatRate).mul(this.localNodeFee).div(this.finalEthPerFiatRate).div(100)) ;
-            checkInvestmentResults(0, 0, expectedEthicHubTeamBalance, teamBalanceFinalBalance);
+            const teamFinalBalance = await web3.eth.getBalance(ethicHubTeam);
+            const expectedEthicHubTeamBalance = teamBalance.add(this.totalLendingAmount.mul(this.initialEthPerFiatRate).mul(this.ethichubFee).div(this.finalEthPerFiatRate).div(100)) ;
+            //checkInvestmentResults(teamInitialBalance, 0, expectedEthicHubTeamBalance, teamFinalBalance);
+            checkLostinTransactions(expectedEthicHubTeamBalance,teamFinalBalance);
         });
 
 
