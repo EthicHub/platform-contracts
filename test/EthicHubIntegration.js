@@ -212,7 +212,6 @@ contract('EthicHubLending (Lending owner != LocalNode)', function() {
     });
     describe('The investment flow', function() {
         it('investment reaches goal', async function() {
-
             await increaseTimeTo(latestTime() + duration.days(1));
             // Some initial parameters
             const initialEthPerFiatRate = 100;
@@ -259,9 +258,10 @@ contract('EthicHubLending (Lending owner != LocalNode)', function() {
             const contribution2 = await lendingInstance.checkInvestorContribution(investor2);
             contribution2.should.be.bignumber.equal(investment2);
             // Goal is reached, no accepts more invesments
-            await lendingInstance.sendTransaction({value: investment3, from: investor3}).should.be.rejectedWith(EVMRevert);
+            transaction = await lendingInstance.sendTransaction({value: investment3, from: investor3}).should.be.rejectedWith(EVMRevert);
             //reportMethodGasUsed('report', 'investor3', 'lendingInstance.sendTransaction', transaction.tx);
 
+            // Send funds to borrower
             transaction = await lendingInstance.sendFundsToBorrower({from: ownerLending}).should.be.fulfilled;
             reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.sendFundsToBorrower', transaction.tx);
             transaction = await lendingInstance.finishInitialExchangingPeriod(initialEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
@@ -346,14 +346,12 @@ contract('EthicHubLending (Lending owner == LocalNode)', function() {
         //web3Contract = web3.eth.contract(lendingInstance.abi).at(lendingInstance.address);
         //ownerLending = web3Contract._eth.coinbase;
     });
-
     it('should pass if contract are on storage contract', async function() {
         let lendingContractAddress = await storageInstance.getAddress(utils.soliditySha3("contract.address", lendingInstance.address));
         lendingContractAddress.should.be.equal(lendingInstance.address);
     });
     describe('The investment flow', function() {
         it('investment reaches goal', async function() {
-
             await increaseTimeTo(latestTime() + duration.days(1));
             // Some initial parameters
             const initialEthPerFiatRate = 100;
@@ -400,9 +398,10 @@ contract('EthicHubLending (Lending owner == LocalNode)', function() {
             const contribution2 = await lendingInstance.checkInvestorContribution(investor2);
             contribution2.should.be.bignumber.equal(investment2);
             // Goal is reached, no accepts more invesments
-            await lendingInstance.sendTransaction({value: investment3, from: investor3}).should.be.rejectedWith(EVMRevert);
+            transaction = await lendingInstance.sendTransaction({value: investment3, from: investor3}).should.be.rejectedWith(EVMRevert);
             //reportMethodGasUsed('report', 'investor3', 'lendingInstance.sendTransaction', transaction.tx);
 
+            // Send funds to borrower
             transaction = await lendingInstance.sendFundsToBorrower({from: ownerLending}).should.be.fulfilled;
             reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.sendFundsToBorrower', transaction.tx);
             transaction = await lendingInstance.finishInitialExchangingPeriod(initialEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
@@ -451,7 +450,7 @@ contract('EthicHubLending (LocalNode not exists)', function() {
     //let web3Contract;
     let cmcInstance;
     describe('Local Node != Local Node of lending contract', function() {
-        it('Not deploy', async function() {
+        it('should not deploy contract', async function() {
             await advanceBlock();
             instances = await deployedContracts();
             storageInstance = instances[0];
@@ -491,7 +490,7 @@ contract('EthicHubLending (LocalNode not exists)', function() {
     });
 });
 
-contract('EthicHubLendingNotFunded', function() {
+contract('EthicHubLending not funded', function() {
     let instances;
     let storageInstance;
     let lendingInstance;
@@ -499,8 +498,8 @@ contract('EthicHubLendingNotFunded', function() {
     let ownerLending = ownerTruffle;
     let userManagerInstance;
     let reputationInstance;
+    //let web3Contract;
     let cmcInstance;
-
     before(async () => {
         instances = await deployedContracts();
         storageInstance = instances[0];
@@ -535,12 +534,13 @@ contract('EthicHubLendingNotFunded', function() {
         ownerLending = await new lendingInstance.owner();
         //web3Contract = web3.eth.contract(lendingInstance.abi).at(lendingInstance.address);
         //ownerLending = web3Contract._eth.coinbase;
-    })
-
-    describe('Not Funded investment flow', function() {
-        it('investment Not Funded', async function() {
-            let lendingContractAddress = await storageInstance.getAddress(utils.soliditySha3("contract.address", lendingInstance.address));
-            lendingContractAddress.should.be.equal(lendingInstance.address);
+    });
+    it('should pass if contract are on storage contract', async function() {
+        let lendingContractAddress = await storageInstance.getAddress(utils.soliditySha3("contract.address", lendingInstance.address));
+        lendingContractAddress.should.be.equal(lendingInstance.address);
+    });
+    describe('The investment flow', function() {
+        it('investment not funded', async function() {
             await increaseTimeTo(latestTime() + duration.days(1));
             // Some initial parameters
             const initialEthPerFiatRate = 100;
@@ -585,14 +585,17 @@ contract('EthicHubLendingNotFunded', function() {
             reportMethodGasUsed('report', 'investor2', 'lendingInstance.sendTransaction', transaction.tx);
             const contribution2 = await lendingInstance.checkInvestorContribution(investor2);
             contribution2.should.be.bignumber.equal(investment2);
-            //reportMethodGasUsed('report', 'investor3', 'lendingInstance.sendTransaction', transaction.tx);
 
             const endTime = await lendingInstance.fundingEndTime()
             await increaseTimeTo(endTime + duration.days(1));
-            await lendingInstance.sendFundsToBorrower({from: ownerLending}).should.be.rejectedWith(EVMRevert);
+
+            // Send funds to borrower
+            transaction = await lendingInstance.sendFundsToBorrower({from: ownerLending}).should.be.rejectedWith(EVMRevert);
+            //reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.sendFundsToBorrower', transaction.tx);
+
+            // project not funded
             await lendingInstance.declareProjectNotFunded({from: ownerLending})
             var state = await lendingInstance.state();
-            // project not funded
             state.toNumber().should.be.equal(ProjectNotFunded);
             var balance = web3.eth.getBalance(lendingInstance.address);
             balance.toNumber().should.be.equal(ether(4).toNumber());
@@ -640,13 +643,13 @@ contract('EthicHubLending not returned on time', function() {
             //Arguments
             lendingStartTime,//_fundingStartTime
             latestTime() + duration.days(35),//_fundingEndTime
-            community,//_representative
+            borrower,//_representative
             10,//_annualInterest
             ether(4),//_totalLendingAmount
             2,//_lendingDays
             storage.address, //_storageAddress
             localNode1,
-            teamEH 
+            teamEH
         )
         await userManagerInstance.registerCommunity(community);
         //Gives set permissions on storage
@@ -662,12 +665,13 @@ contract('EthicHubLending not returned on time', function() {
         ownerLending = await new lendingInstance.owner();
         //web3Contract = web3.eth.contract(lendingInstance.abi).at(lendingInstance.address);
         //ownerLending = web3Contract._eth.coinbase;
-    })
-
-    describe('not returned on time', function() {
-        it('not returned on time', async function() {
-            let lendingContractAddress = await storageInstance.getAddress(utils.soliditySha3("contract.address", lendingInstance.address));
-            lendingContractAddress.should.be.equal(lendingInstance.address);
+    });
+    it('should pass if contract are on storage contract', async function() {
+        let lendingContractAddress = await storageInstance.getAddress(utils.soliditySha3("contract.address", lendingInstance.address));
+        lendingContractAddress.should.be.equal(lendingInstance.address);
+    });
+    describe('The investment flow', function() {
+        it('investment not returned on time', async function() {
             await increaseTimeTo(latestTime() + duration.days(1));
             await advanceBlock();
             // Some initial parameters
@@ -675,6 +679,7 @@ contract('EthicHubLending not returned on time', function() {
             const finalEthPerFiatRate = 100;
             const investment1 = ether(2);
             const investment2 = ether(2);
+            const investment3 = ether(1.5);
             const delayDays = 2;
             let transaction;
 
@@ -706,12 +711,8 @@ contract('EthicHubLending not returned on time', function() {
             isRunning.should.be.equal(true);
 
             // Investment part
-            // Save initial reputation
-            const oldLocalNodeRep = await reputationInstance.getLocalNodeReputation(localNode1);
-            console.log('Init Local Node Reputation: ' + oldLocalNodeRep);
-            const oldCommunityRep = await reputationInstance.getCommunityReputation(community);
-            console.log('Init Community Reputation: ' + oldCommunityRep);
-
+            //Raw transaction in truffle develop. CAUTION the private key is from truffle
+            //await rawTransaction(investor1, privateKeys[5], lendingInstance.address, '', investment1).should.be.fulfilled;
             //Send transaction
             transaction = await lendingInstance.sendTransaction({value: investment1, from: investor1}).should.be.fulfilled;
             reportMethodGasUsed('report', 'investor1', 'lendingInstance.sendTransaction', transaction.tx);
@@ -721,50 +722,53 @@ contract('EthicHubLending not returned on time', function() {
             reportMethodGasUsed('report', 'investor2', 'lendingInstance.sendTransaction', transaction.tx);
             const contribution2 = await lendingInstance.checkInvestorContribution(investor2);
             contribution2.should.be.bignumber.equal(investment2);
+            // Goal is reached, no accepts more invesments
+            transaction = await lendingInstance.sendTransaction({value: investment3, from: investor3}).should.be.rejectedWith(EVMRevert);
             //reportMethodGasUsed('report', 'investor3', 'lendingInstance.sendTransaction', transaction.tx);
-
 
             const fundingEndTime = await lendingInstance.fundingEndTime()
             await increaseTimeTo(fundingEndTime.add(duration.minutes(1)));
             await advanceBlock();
 
-            await lendingInstance.sendFundsToBorrower({from:ownerTruffle}).should.be.fulfilled;
-            console.log(1)
-            await lendingInstance.finishInitialExchangingPeriod(initialEthPerFiatRate, {from: ownerTruffle}).should.be.fulfilled;
-            console.log(2)
-            await lendingInstance.setBorrowerReturnEthPerFiatRate(finalEthPerFiatRate, {from: ownerTruffle}).should.be.fulfilled;
+            // Send funds to borrower
+            transaction = await lendingInstance.sendFundsToBorrower({from:ownerLending}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.sendFundsToBorrower', transaction.tx);
+            transaction = await lendingInstance.finishInitialExchangingPeriod(initialEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.finishInitialExchangingPeriod', transaction.tx);
+
+            // Borrower return amount
+            transaction = await lendingInstance.setBorrowerReturnEthPerFiatRate(finalEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.setBorrowerReturnEthPerFiatRate', transaction.tx);
+            // Show balances
+            //console.log('=== MIDDLE ===');
+            //await traceBalancesAllActors();
+
+            //delay to 1 of 2 default days
             var defaultTime = fundingEndTime.add(duration.days(3));
-            console.log(5)
-            await increaseTimeTo(defaultTime);//+ duration.days(1) + duration.minutes(2));//+ duration.seconds(1))
-            await advanceBlock()
+            await increaseTimeTo(defaultTime);
+            await advanceBlock();
 
-            console.log(3)
             const borrowerReturnAmount = await lendingInstance.borrowerReturnAmount();
-            console.log(4)
-
-            //dalay to 1 of 2 dafault days
-            // reputation should be reduced to half
-            await lendingInstance.sendTransaction({value: borrowerReturnAmount, from: community}).should.be.fulfilled;
-            console.log(6)
-            /*
-            const trueBorrowerReturnAmount = await this.lending.borrowerReturnAmount() // actual returnAmount
-            await this.lending.sendTransaction({value: trueBorrowerReturnAmount, from: borrower}).should.be.fulfilled;
-            */
+            transaction = await lendingInstance.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'borrower', 'lendingInstance.sendTransaction', transaction.tx);
 
             await lendingInstance.declareProjectDefault({from: ownerLending}).should.be.rejectedWith(EVMRevert);
 
             var lendingDelayDays = await storageInstance.getUint(utils.soliditySha3("lending.delayDays", lendingInstance.address));
             lendingDelayDays.toNumber().should.be.equal(1);
 
+            // Show balances
+            //console.log('=== FINISH ===');
+            //await traceBalancesAllActors();
+
             // Calculate reputation
+            // reputation should be reduced to half
             await checkReputation(localNode1, community, initialLocalNodeReputation, initialCommunityReputation, lendingInstance, storageInstance, reputationInstance, lendingDelayDays);
+        });
+    });
+});
 
-        })
-    })
-
-})
-
-contract('EthicHubLending Default ->', function() {
+contract('EthicHubLending declare default', function() {
     let instances;
     let storageInstance;
     let lendingInstance;
@@ -811,12 +815,13 @@ contract('EthicHubLending Default ->', function() {
         ownerLending = await new lendingInstance.owner();
         //web3Contract = web3.eth.contract(lendingInstance.abi).at(lendingInstance.address);
         //ownerLending = web3Contract._eth.coinbase;
-    })
-
-    describe('declared project default', function() {
+    });
+    it('should pass if contract are on storage contract', async function() {
+        let lendingContractAddress = await storageInstance.getAddress(utils.soliditySha3("contract.address", lendingInstance.address));
+        lendingContractAddress.should.be.equal(lendingInstance.address);
+    });
+    describe('The investment flow', function() {
         it('declared project default', async function() {
-            let lendingContractAddress = await storageInstance.getAddress(utils.soliditySha3("contract.address", lendingInstance.address));
-            lendingContractAddress.should.be.equal(lendingInstance.address);
             await increaseTimeTo(latestTime() + duration.days(1));
             await advanceBlock();
             // Some initial parameters
@@ -824,6 +829,7 @@ contract('EthicHubLending Default ->', function() {
             const finalEthPerFiatRate = 100;
             const investment1 = ether(2);
             const investment2 = ether(2);
+            const investment3 = ether(1.5);
             const delayDays = 2;
             let transaction;
 
@@ -866,37 +872,48 @@ contract('EthicHubLending Default ->', function() {
             reportMethodGasUsed('report', 'investor2', 'lendingInstance.sendTransaction', transaction.tx);
             const contribution2 = await lendingInstance.checkInvestorContribution(investor2);
             contribution2.should.be.bignumber.equal(investment2);
+            // Goal is reached, no accepts more invesments
+            transaction = await lendingInstance.sendTransaction({value: investment3, from: investor3}).should.be.rejectedWith(EVMRevert);
             //reportMethodGasUsed('report', 'investor3', 'lendingInstance.sendTransaction', transaction.tx);
 
 
             const fundingEndTime = await lendingInstance.fundingEndTime()
             await increaseTimeTo(fundingEndTime.add(duration.minutes(1)));
 
-            await lendingInstance.sendFundsToBorrower({from:ownerTruffle}).should.be.fulfilled;
-            await lendingInstance.finishInitialExchangingPeriod(initialEthPerFiatRate, {from: ownerTruffle}).should.be.fulfilled;
-            await lendingInstance.setBorrowerReturnEthPerFiatRate(finalEthPerFiatRate, {from: ownerTruffle}).should.be.fulfilled;
-            const borrowerReturnAmount = await lendingInstance.borrowerReturnAmount();
+            // Send funds to borrower
+            transaction = await lendingInstance.sendFundsToBorrower({from:ownerLending}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.sendFundsToBorrower', transaction.tx);
+            transaction = await lendingInstance.finishInitialExchangingPeriod(initialEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.finishInitialExchangingPeriod', transaction.tx);
+
+            // Borrower return amount
+            transaction = await lendingInstance.setBorrowerReturnEthPerFiatRate(finalEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.setBorrowerReturnEthPerFiatRate', transaction.tx);
+            // Show balances
+            //console.log('=== MIDDLE ===');
+            //await traceBalancesAllActors();
 
             //This should be the edge case : end of funding time + awaiting for return period.
             var defaultTime = fundingEndTime.add(duration.days(4)).add(duration.days(1));
-            await increaseTimeTo(defaultTime);//+ duration.days(1) + duration.minutes(2));//+ duration.seconds(1))
-            /*
-            const trueBorrowerReturnAmount = await this.lending.borrowerReturnAmount() // actual returnAmount
-            await this.lending.sendTransaction({value: trueBorrowerReturnAmount, from: borrower}).should.be.fulfilled;
-            */
+            await increaseTimeTo(defaultTime);
 
             await lendingInstance.declareProjectDefault({from: ownerLending}).should.be.fulfilled;
-            await lendingInstance.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.rejectedWith(EVMRevert);
+            const borrowerReturnAmount = await lendingInstance.borrowerReturnAmount();
+            transaction = await lendingInstance.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.rejectedWith(EVMRevert);
+            //reportMethodGasUsed('report', 'borrower', 'lendingInstance.sendTransaction', transaction.tx);
 
             var lendingDelayDays = await storageInstance.getUint(utils.soliditySha3("lending.delayDays", lendingInstance.address));
             lendingDelayDays.toNumber().should.be.equal(2);
 
+            // Show balances
+            //console.log('=== FINISH ===');
+            //await traceBalancesAllActors();
+
             // Calculate reputation
             await checkReputation(localNode1, community, initialLocalNodeReputation, initialCommunityReputation, lendingInstance, storageInstance, reputationInstance, delayDays);
-
-        })
-    })
-})
+        });
+    });
+});
 
 contract('EthicHubLending with surplus', function() {
     let instances;
@@ -923,7 +940,7 @@ contract('EthicHubLending with surplus', function() {
             //Arguments
             lendingStartTime,//_fundingStartTime
             latestTime() + duration.days(35),//_fundingEndTime
-            community,//_representative
+            borrower,//_representative
             10,//_annualInterest
             ether(4),//_totalLendingAmount
             2,//_lendingDays
@@ -945,11 +962,13 @@ contract('EthicHubLending with surplus', function() {
         ownerLending = await new lendingInstance.owner();
         //web3Contract = web3.eth.contract(lendingInstance.abi).at(lendingInstance.address);
         //ownerLending = web3Contract._eth.coinbase;
-    })
-
-    it('EthicHubLending with surplus', async function() {
-            let lendingContractAddress = await storageInstance.getAddress(utils.soliditySha3("contract.address", lendingInstance.address));
-            lendingContractAddress.should.be.equal(lendingInstance.address);
+    });
+    it('should pass if contract are on storage contract', async function() {
+        let lendingContractAddress = await storageInstance.getAddress(utils.soliditySha3("contract.address", lendingInstance.address));
+        lendingContractAddress.should.be.equal(lendingInstance.address);
+    });
+    describe('The investment flow', function() {
+        it('investment with surplus', async function() {
             await increaseTimeTo(latestTime() + duration.days(1));
             await advanceBlock();
             const surplus = ether(2)
@@ -958,6 +977,7 @@ contract('EthicHubLending with surplus', function() {
             const finalEthPerFiatRate = 100;
             const investment1 = ether(2);
             const investment2 = ether(2);
+            const investment3 = ether(1.5);
             const delayDays = 2;
             let transaction;
 
@@ -991,12 +1011,6 @@ contract('EthicHubLending with surplus', function() {
             // Investment part
             //Raw transaction in truffle develop. CAUTION the private key is from truffle
             //await rawTransaction(investor1, privateKeys[5], lendingInstance.address, '', investment1).should.be.fulfilled;
-            // Save initial reputation
-            const oldLocalNodeRep = await reputationInstance.getLocalNodeReputation(localNode1);
-            console.log('Init Local Node Reputation: ' + oldLocalNodeRep);
-            const oldCommunityRep = await reputationInstance.getCommunityReputation(community);
-            console.log('Init Community Reputation: ' + oldCommunityRep);
-
             //Send transaction
             transaction = await lendingInstance.sendTransaction({value: investment1, from: investor1}).should.be.fulfilled;
             reportMethodGasUsed('report', 'investor1', 'lendingInstance.sendTransaction', transaction.tx);
@@ -1006,16 +1020,26 @@ contract('EthicHubLending with surplus', function() {
             reportMethodGasUsed('report', 'investor2', 'lendingInstance.sendTransaction', transaction.tx);
             const contribution2 = await lendingInstance.checkInvestorContribution(investor2);
             contribution2.should.be.bignumber.equal(investment2);
+            // Goal is reached, no accepts more invesments
+            transaction = await lendingInstance.sendTransaction({value: investment3, from: investor3}).should.be.rejectedWith(EVMRevert);
             //reportMethodGasUsed('report', 'investor3', 'lendingInstance.sendTransaction', transaction.tx);
-        
-            await lendingInstance.sendFundsToBorrower({from:ownerLending}).should.be.fulfilled;
 
+            // Send funds to borrower
+            transaction = await lendingInstance.sendFundsToBorrower({from:ownerLending}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.sendFundsToBorrower', transaction.tx);
 
-            // send surplus 2 eth
-            await lendingInstance.sendTransaction({value: surplus, from: community}).should.be.fulfilled
-            await lendingInstance.finishInitialExchangingPeriod(initialEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
+            // Send surplus 2 eth
+            transaction = await lendingInstance.sendTransaction({value: surplus, from: borrower}).should.be.fulfilled
+            reportMethodGasUsed('report', 'borrower', 'lendingInstance.sendTransaction', transaction.tx);
+            transaction = await lendingInstance.finishInitialExchangingPeriod(initialEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.finishInitialExchangingPeriod', transaction.tx);
 
-            await lendingInstance.setBorrowerReturnEthPerFiatRate(finalEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
+            // Borrower return amount
+            transaction = await lendingInstance.setBorrowerReturnEthPerFiatRate(finalEthPerFiatRate, {from: ownerLending}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'ownerLending', 'lendingInstance.setBorrowerReturnEthPerFiatRate', transaction.tx);
+            // Show balances
+            //console.log('=== MIDDLE ===');
+            //await traceBalancesAllActors();
             var investorInitialBalance = await web3.eth.getBalance(investor1);
             var investor2InitialBalance = await web3.eth.getBalance(investor2);
             await lendingInstance.reclaimSurplusEth(investor1).should.be.fulfilled;
@@ -1029,15 +1053,14 @@ contract('EthicHubLending with surplus', function() {
             var expectedInvestor2Balance = investor2InitialBalance.add(ether(1));
             checkLostinTransactions(expectedInvestor2Balance,investor2FinalBalance);
 
-
             const borrowerReturnAmount = await lendingInstance.borrowerReturnAmount();
-            await lendingInstance.sendTransaction({value: borrowerReturnAmount, from: community}).should.be.fulfilled;
+            transaction = await lendingInstance.returnBorrowedEth({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
+            reportMethodGasUsed('report', 'borrower', 'lendingInstance.returnBorrowedEth', transaction.tx);
 
             var investorInitialBalance = await web3.eth.getBalance(investor1);
             var investor2InitialBalance = await web3.eth.getBalance(investor2);
             await lendingInstance.reclaimContributionWithInterest(investor1).should.be.fulfilled;
             await lendingInstance.reclaimContributionWithInterest(investor2).should.be.fulfilled;
-
 
             var investorFinalBalance = await web3.eth.getBalance(investor1);
             var expectedInvestorBalance = getExpectedInvestorBalance(investorInitialBalance, investment1.sub(ether(2).div(2)), initialEthPerFiatRate, 10, finalEthPerFiatRate)
@@ -1047,9 +1070,9 @@ contract('EthicHubLending with surplus', function() {
             var expectedInvestor2Balance = getExpectedInvestorBalance(investorInitialBalance, investment2.sub(ether(2).div(2)), initialEthPerFiatRate, 10, finalEthPerFiatRate);
             checkLostinTransactions(expectedInvestor2Balance,investor2FinalBalance);
 
-        })
-
-})
+        });
+    });
+});
 
 function traceBalancesAllActors() {
     const ownerBalance = utils.fromWei(utils.toBN(web3.eth.getBalance(ownerTruffle)));
