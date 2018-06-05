@@ -1084,7 +1084,7 @@ function traceBalancesAllActors() {
     const teamBalance = utils.fromWei(utils.toBN(web3.eth.getBalance(teamEH)));
     const communityBalance = utils.fromWei(utils.toBN(web3.eth.getBalance(community)));
     console.log('Owner Contract:' + ownerBalance);
-    console.log('Owner Contract:' + borrowerBalance);
+    console.log('Borrower:' + borrowerBalance);
     console.log('Investor 1:' + investor1Balance);
     console.log('Investor 2:' + investor2Balance);
     console.log('Investor 3:' + investor3Balance);
