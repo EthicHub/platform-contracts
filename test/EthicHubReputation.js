@@ -129,7 +129,6 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
     });
 
     describe('Local node decrement', function() {
-
         it('should burn same as commnity, max 1 step (100) ', async function() {
             const initialReputation = this.maxReputation.mul(0.5);
             var delayDays = 1;
@@ -172,8 +171,14 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
 
     });
 
-    describe('From storage -> Burn', function() {
+    describe('From storage -> burn', function() {
+        it ('should not decrement another that is not lending contract', async function () {
+            await this.mockStorage.setAddress(utils.soliditySha3("contract.address", lendingContract), lendingContract);
+            const delayDays = new BigNumber(0);
+            await this.reputation.burnReputation(delayDays, {from: owner}).should.be.rejectedWith(EVMRevert);
+        });
         it('Should burn reputation', async function() {
+            await this.mockStorage.setAddress(utils.soliditySha3("contract.address", lendingContract), lendingContract);
             await this.mockStorage.setUint(utils.soliditySha3("lending.maxDelayDays", lendingContract),this.maxDelayDays);
             const delayDays = new BigNumber(1);
             await this.mockStorage.setUint(utils.soliditySha3("lending.delayDays", lendingContract),delayDays);
@@ -201,6 +206,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
         });
 
         it('Lending contract should have a community', async function() {
+            await this.mockStorage.setAddress(utils.soliditySha3("contract.address", lendingContract), lendingContract);
             await this.mockStorage.setUint(utils.soliditySha3("lending.maxDelayDays", lendingContract),this.maxDelayDays);
             const delayDays = new BigNumber(1);
             await this.mockStorage.setUint(utils.soliditySha3("lending.delayDays", lendingContract),delayDays);
@@ -215,6 +221,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
         });
 
         it('Lending contract should have a localNode', async function() {
+            await this.mockStorage.setAddress(utils.soliditySha3("contract.address", lendingContract), lendingContract);
             await this.mockStorage.setUint(utils.soliditySha3("lending.maxDelayDays", lendingContract),this.maxDelayDays);
             const delayDays = new BigNumber(1);
             await this.mockStorage.setUint(utils.soliditySha3("lending.delayDays", lendingContract),delayDays);
@@ -229,6 +236,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
         });
 
         it('Lending should have a maxDelayDays localNode', async function() {
+            await this.mockStorage.setAddress(utils.soliditySha3("contract.address", lendingContract), lendingContract);
             //await this.mockStorage.setUint(utils.soliditySha3("lending.maxDelayDays", lendingContract),this.maxDelayDays);
             const delayDays = new BigNumber(1);
             await this.mockStorage.setUint(utils.soliditySha3("lending.delayDays", lendingContract),delayDays);
@@ -243,6 +251,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
         });
 
         it('Lending contract should be in default', async function() {
+            await this.mockStorage.setAddress(utils.soliditySha3("contract.address", lendingContract), lendingContract);
             await this.mockStorage.setUint(utils.soliditySha3("lending.maxDelayDays", lendingContract),this.maxDelayDays);
             const delayDays = new BigNumber(0);
             //await this.mockStorage.setUint(utils.soliditySha3("lending.delayDays", lendingContract),delayDays);
@@ -259,10 +268,15 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
     });
 
     describe('From storage -> increase', function() {
+        it ('should not increment another that is not lending contract', async function () {
+            await this.mockStorage.setAddress(utils.soliditySha3("contract.address", lendingContract), lendingContract);
+            const completedProjectsByTier = new BigNumber(0);
+            await this.reputation.incrementReputation(completedProjectsByTier, {from: owner}).should.be.rejectedWith(EVMRevert);
+        });
         it('Should increase reputation', async function() {
-
             const projectTier = new BigNumber(1);
             const previouslyCompletedProjects = new BigNumber(3);
+            await this.mockStorage.setAddress(utils.soliditySha3("contract.address", lendingContract), lendingContract);
             await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
             await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
@@ -293,6 +307,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
         it('Should fail without a community', async function() {
             const projectTier = new BigNumber(1);
             const previouslyCompletedProjects = new BigNumber(3);
+            await this.mockStorage.setAddress(utils.soliditySha3("contract.address", lendingContract), lendingContract);
             await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
             await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
@@ -311,6 +326,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
         it('Should fail without a localNode', async function() {
             const projectTier = new BigNumber(1);
             const previouslyCompletedProjects = new BigNumber(3);
+            await this.mockStorage.setAddress(utils.soliditySha3("contract.address", lendingContract), lendingContract);
             await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
             await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
@@ -329,6 +345,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
         it('Should fail without an assigned tier in lending', async function() {
             const projectTier = new BigNumber(1);
             const previouslyCompletedProjects = new BigNumber(3);
+            await this.mockStorage.setAddress(utils.soliditySha3("contract.address", lendingContract), lendingContract);
             //await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
             await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 
@@ -347,6 +364,7 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
         it('Should fail without a succesful project', async function() {
             const projectTier = new BigNumber(1);
             const previouslyCompletedProjects = new BigNumber(0);
+            await this.mockStorage.setAddress(utils.soliditySha3("contract.address", lendingContract), lendingContract);
             await this.mockStorage.setUint(utils.soliditySha3("lending.tier", lendingContract),projectTier);
             //await this.mockStorage.setUint(utils.soliditySha3("community.completedProjectsByTier", lendingContract, projectTier), previouslyCompletedProjects);
 

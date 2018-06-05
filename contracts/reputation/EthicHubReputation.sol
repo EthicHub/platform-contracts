@@ -28,13 +28,18 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
         _;
     }
 
+    modifier onlyLendingContract() {
+        require(ethicHubStorage.getAddress(keccak256("contract.address", msg.sender)) == msg.sender);
+        _;
+    }
+
     /// @dev constructor
     constructor(address _storageAddress) EthicHubBase(_storageAddress) public {
       // Version
       version = 1;
     }
 
-    function burnReputation(uint delayDays) external {
+    function burnReputation(uint delayDays) external onlyLendingContract {
         address lendingContract = msg.sender;
         //Get temporal parameters
         uint maxDelayDays = ethicHubStorage.getUint(keccak256("lending.maxDelayDays", lendingContract));
@@ -63,7 +68,7 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
 
     }
 
-    function incrementReputation(uint completedProjectsByTier) external {
+    function incrementReputation(uint completedProjectsByTier) external onlyLendingContract {
         address lendingContract = msg.sender;
         //Affected players
         address community = ethicHubStorage.getAddress(keccak256("lending.community", lendingContract));
