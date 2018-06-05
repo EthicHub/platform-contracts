@@ -38,9 +38,6 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
     });
 
     describe('Community decrement', function() {
-        it ('should not decrement another that is not lending contract', async function{
-            //TODO
-        });
         it('should burn 1% per day passed after 100 days max', async function() {
             const initialReputation = this.maxReputation.mul(0.5);
             for (var delayDays = 1; delayDays<=100; delayDays++) {
@@ -71,9 +68,6 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
     });
 
     describe('Community increment', function() {
-        it ('should not increment another that is not lending contract', async function{
-            //TODO
-        });
         it('should add 1/CompletedSameTierProjects', async function() {
             var rep = this.initialReputation;
             //console.log("-----");
@@ -102,9 +96,6 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
     });
 
     describe('Local node increment', function() {
-        it ('should not increment another that is not lending contract', async function{
-            //TODO
-        });
         it('should increment correct number', async function() {
             var prevRep = this.initialReputation;
             var community = this.minimumPeopleCommunity;
@@ -138,9 +129,6 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
     });
 
     describe('Local node decrement', function() {
-        it ('should not decrement another that is not lending contract', async function{
-            //TODO
-        });
         it('should burn same as commnity, max 1 step (100) ', async function() {
             const initialReputation = this.maxReputation.mul(0.5);
             var delayDays = 1;
@@ -186,6 +174,9 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
     });
 
     describe('From storage -> Burn', function() {
+        //it ('should not decrement another that is not lending contract', async function () {
+        //    await this.reputation.burnReputation(delayDays, {from: owner}).should.be.rejectedWith(EVMRevert);
+        //});
         it('Should burn reputation', async function() {
             await this.mockStorage.setUint(utils.soliditySha3("lending.maxDelayDays", lendingContract),this.maxDelayDays);
             const delayDays = new BigNumber(1);
@@ -272,6 +263,9 @@ contract('EthicHubReputation', function ([owner, community, localNode, lendingCo
     });
 
     describe('From storage -> increase', function() {
+        //it ('should not increment another that is not lending contract', async function () {
+        //    await this.reputation.incrementReputation(completedProjectsByTier, {from: owner}).should.be.rejectedWith(EVMRevert);
+        //});
         it('Should increase reputation', async function() {
 
             const projectTier = new BigNumber(1);
