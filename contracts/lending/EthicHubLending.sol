@@ -169,7 +169,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
     function declareProjectDefault() external onlyOwnerOrLocalNode {
         require(state == LendingState.AwaitingReturn);
-        uint maxDelayDays = ethicHubStorage.getUint(keccak256("lending.maxDelayDays", this));
+        uint maxDelayDays = getMaxDelayDays();
         require(getDelayDays(now) >= maxDelayDays);
         ethicHubStorage.setUint(keccak256("lending.delayDays", this), maxDelayDays);
         reputation.burnReputation(maxDelayDays);
@@ -394,5 +394,9 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
     function checkInvestorContribution(address investor) public view returns(uint256){
         return investors[investor].amount;
+    }
+
+    function getMaxDelayDays() public view returns(uint){
+        return ethicHubStorage.getUint(keccak256("lending.maxDelayDays", this));
     }
 }
