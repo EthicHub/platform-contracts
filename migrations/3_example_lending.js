@@ -38,6 +38,7 @@ module.exports = async (deployer, network, accounts) => {
     const localNode = accounts[3]
     userManagerInstance = await userManager.deployed();
     await userManagerInstance.registerLocalNode(localNode);
+    await userManagerInstance.registerRepresentative(accounts[2]);
 
     const community = accounts[8]
     console.log("--> Deploying EthicHubLending(Owner)...");
