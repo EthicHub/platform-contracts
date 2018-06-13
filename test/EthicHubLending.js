@@ -46,6 +46,7 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
         this.mockReputation = await MockReputation.new();
         await this.mockStorage.setAddress(utils.soliditySha3("contract.name", "reputation"),this.mockReputation.address);
         await this.mockStorage.setBool(utils.soliditySha3("user", "localNode",localNode),true);
+        await this.mockStorage.setBool(utils.soliditySha3("user", "representative",borrower),true);
 
         this.lending = await EthicHubLending.new(
                                                 this.fundingStartTime,
@@ -90,6 +91,38 @@ contract('EthicHubLending', function ([owner, borrower, investor, investor2, inv
             state.toNumber().should.be.equal(Uninitialized);
             isRunning.should.be.equal(false);
             await someLending.sendTransaction({value:ether(1), from: investor}).should.be.rejectedWith(EVMRevert);
+        });
+
+        it('should not allow create projects with unregistered local nodes', async function () {
+            //await advanceBlock();
+            var someLending = await EthicHubLending.new(
+                                                    this.fundingStartTime,
+                                                    this.fundingEndTime,
+                                                    borrower,
+                                                    this.lendingInterestRatePercentage,
+                                                    this.totalLendingAmount,
+                                                    this.lendingDays,
+                                                    this.mockStorage.address,
+                                                    borrower,
+                                                    ethicHubTeam
+                                                ).should.be.rejectedWith(EVMRevert);
+
+        });
+
+        it('should not allow to invest with unregistered representatives', async function () {
+            //await advanceBlock();
+            var someLending = await EthicHubLending.new(
+                                                    this.fundingStartTime,
+                                                    this.fundingEndTime,
+                                                    localNode,
+                                                    this.lendingInterestRatePercentage,
+                                                    this.totalLendingAmount,
+                                                    this.lendingDays,
+                                                    this.mockStorage.address,
+                                                    localNode,
+                                                    ethicHubTeam
+                                                ).should.be.rejectedWith(EVMRevert);
+
         });
     });
 

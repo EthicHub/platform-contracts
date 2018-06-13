@@ -135,6 +135,11 @@ contract('EthicHubUser', function() {
         let registrationStatus = await userManagerInstance.viewRegistrationStatus(investor1, 'investor');
         registrationStatus.should.be.equal(true);
     });
+    it('should register representative', async function() {
+        await userManagerInstance.registerRepresentative(borrower);
+        let registrationStatus = await userManagerInstance.viewRegistrationStatus(investor1, 'investor');
+        registrationStatus.should.be.equal(true);
+    });
     it('change user status', async function() {
         await userManagerInstance.changeUserStatus(investor1, 'investor', false);
         let registrationStatus = await userManagerInstance.viewRegistrationStatus(investor1, 'investor');
@@ -179,6 +184,7 @@ contract('EthicHubLending (Lending owner != LocalNode)', function() {
         cmcInstance = instances[3];
         // register first LocalNode necessary on lending contract
         await userManagerInstance.registerLocalNode(localNode1);
+        await userManagerInstance.registerRepresentative(borrower);
         lendingInstance = await lending.new(
             //Arguments
             latestTime() + duration.days(1),//_fundingStartTime
@@ -318,6 +324,7 @@ contract('EthicHubLending (Lending owner == LocalNode)', function() {
         cmcInstance = instances[3];
         // register first LocalNode necessary on lending contract
         await userManagerInstance.registerLocalNode(localNode2);
+        await userManagerInstance.registerRepresentative(borrower);
         lendingInstance = await lending.new(
             //Arguments
             latestTime() + duration.days(1),//_fundingStartTime
@@ -331,6 +338,7 @@ contract('EthicHubLending (Lending owner == LocalNode)', function() {
             teamEH
         )
         await userManagerInstance.registerCommunity(community);
+
         //Gives set permissions on storage
         await cmcInstance.addNewLendingContract(lendingInstance.address, {from: localNode2});
         console.log("--> EthicHubLending deployed");
@@ -459,6 +467,7 @@ contract('EthicHubLending (LocalNode not exists)', function() {
             cmcInstance = instances[3];
             // register first LocalNode necessary on lending contract
             await userManagerInstance.registerLocalNode(localNode1);
+            await userManagerInstance.registerRepresentative(borrower);
             lendingInstance = await lending.new(
                 //Arguments
                 latestTime() + duration.days(1),//_fundingStartTime
@@ -508,6 +517,7 @@ contract('EthicHubLending not funded', function() {
         cmcInstance = instances[3];
         // register first LocalNode necessary on lending contract
         await userManagerInstance.registerLocalNode(localNode1);
+        await userManagerInstance.registerRepresentative(borrower);
         lendingInstance = await lending.new(
             //Arguments
             latestTime() + duration.days(1),//_fundingStartTime
@@ -521,6 +531,7 @@ contract('EthicHubLending not funded', function() {
             teamEH
         )
         await userManagerInstance.registerCommunity(community);
+        await userManagerInstance.registerRepresentative(borrower);
         //Gives set permissions on storage
         await cmcInstance.addNewLendingContract(lendingInstance.address);
         console.log("--> EthicHubLending deployed");
@@ -639,6 +650,7 @@ contract('EthicHubLending not returned on time', function() {
         lendingStartTime = latestTime() + duration.days(1);
         // register first LocalNode necessary on lending contract
         await userManagerInstance.registerLocalNode(localNode1);
+        await userManagerInstance.registerRepresentative(borrower);
         lendingInstance = await lending.new(
             //Arguments
             lendingStartTime,//_fundingStartTime
@@ -652,6 +664,7 @@ contract('EthicHubLending not returned on time', function() {
             teamEH
         )
         await userManagerInstance.registerCommunity(community);
+
         //Gives set permissions on storage
         await cmcInstance.addNewLendingContract(lendingInstance.address);
         console.log("--> EthicHubLending deployed");
@@ -789,6 +802,7 @@ contract('EthicHubLending declare default', function() {
         lendingStartTime = latestTime() + duration.days(1);
         // register first LocalNode necessary on lending contract
         await userManagerInstance.registerLocalNode(localNode1);
+        await userManagerInstance.registerRepresentative(borrower);
         lendingInstance = await lending.new(
             //Arguments
             lendingStartTime,//_fundingStartTime
@@ -936,6 +950,7 @@ contract('EthicHubLending with surplus', function() {
         lendingStartTime = latestTime() + duration.days(1);
         // register first LocalNode necessary on lending contract
         await userManagerInstance.registerLocalNode(localNode1);
+        await userManagerInstance.registerRepresentative(borrower);
         lendingInstance = await lending.new(
             //Arguments
             lendingStartTime,//_fundingStartTime

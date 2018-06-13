@@ -120,5 +120,15 @@ contract EthicHubUser is Ownable, EthicHubBase {
         ethicHubStorage.setBool(keccak256("user", "investor", target), true);
     }
 
+    /**
+     * @dev register a community representative address.
+     */
+    function registerRepresentative(address target)
+        external
+        onlyOwner
+    {
+        ethicHubStorage.setBool(keccak256("user", "representative", target), true);
+    }
+
 
 }
