@@ -203,9 +203,8 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
      */
     function reclaimContributionDefault(address beneficiary) external {
         require(state == LendingState.Default);
-        uint256 investorAmount = investors[beneficiary].amount;
         // contribution = contribution * partial_funds / total_funds
-        uint256 contribution = investorAmount.mul(returnedEth).div(totalLendingAmount);
+        uint256 contribution = checkInvestorReturns(beneficiary);
         require(contribution > 0);
         require(!investors[beneficiary].isCompensated);
         investors[beneficiary].isCompensated = true;
@@ -240,11 +239,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
     function reclaimContributionWithInterest(address beneficiary) external {
         require(state == LendingState.ContributionReturned);
-        uint256 investorAmount = investors[beneficiary].amount;
-        if (surplusEth > 0){
-            investorAmount  = investors[beneficiary].amount.mul(totalLendingAmount).div(totalContributed);
-        }
-        uint256 contribution = investorAmount.mul(initialEthPerFiatRate).mul(investorInterest()).div(borrowerReturnEthPerFiatRate).div(interestBasePercent);
+        uint256 contribution = checkInvestorReturns(beneficiary);
         require(contribution > 0);
         require(!investors[beneficiary].isCompensated);
         investors[beneficiary].isCompensated = true;
@@ -394,6 +389,23 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
     function checkInvestorContribution(address investor) public view returns(uint256){
         return investors[investor].amount;
+    }
+
+    function checkInvestorReturns(address investor) public view returns(uint256) {
+        uint256 investorAmount = 0;
+        if (state == LendingState.ContributionReturned) {
+            investorAmount = investors[investor].amount;
+            if (surplusEth > 0){
+                investorAmount  = investors[investor].amount.mul(totalLendingAmount).div(totalContributed);
+            }
+            return investorAmount.mul(initialEthPerFiatRate).mul(investorInterest()).div(borrowerReturnEthPerFiatRate).div(interestBasePercent);
+        } else if (state == LendingState.Default){
+            investorAmount = investors[investor].amount;
+            // contribution = contribution * partial_funds / total_funds
+            return investorAmount.mul(returnedEth).div(totalLendingAmount);
+        } else {
+            return 0;
+        }
     }
 
     function getMaxDelayDays() public view returns(uint){
