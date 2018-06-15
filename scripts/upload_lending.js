@@ -37,7 +37,7 @@ let storageAddress = '0x5ae98649601190a1d6cbb319e6bf218b8ef262d5';
 let localNode = '0x22B81a6ba76eE53adE0b918C20b4E4c23e3ad473';
 let representative = '0x87F751f7ae13F1C6fc1a7f67C550773350a52Cb5';
 let community = '0x9441a32D2CFA0Cff7c5374D46Fd1B391Fab44146';
-
+let team = '0xdFb6994ADD952486d2B65af4A6c9D511b122f172';
 
 
 loader.load(web3, 'EthicHubCMC', cmcAddress).then( cmcInstance => {
@@ -80,7 +80,7 @@ loader.load(web3, 'EthicHubCMC', cmcAddress).then( cmcInstance => {
                         '2',//_lendingDays
                         storageAddress, //_storageAddress
                         localNode,//localNode
-                        accounts[4]//team
+                        team
                     ]
                 })
                 .send({
