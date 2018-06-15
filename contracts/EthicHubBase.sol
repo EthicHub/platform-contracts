@@ -7,7 +7,7 @@ contract EthicHubBase {
 
     uint8 public version;
 
-    EthicHubStorageInterface ethicHubStorage = EthicHubStorageInterface(0);
+    EthicHubStorageInterface public ethicHubStorage = EthicHubStorageInterface(0);
 
     constructor(address _storageAddress) public {
         // Update the contract address
