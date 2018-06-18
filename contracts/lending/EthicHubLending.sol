@@ -45,7 +45,6 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     uint256 public constant interestBasePercent = 10000;
     bool public localNodeFeeReclaimed;
     bool public ethicHubTeamFeeReclaimed;
-    EthicHubReputationInterface reputation = EthicHubReputationInterface(0);
     uint256 public surplusEth;
     uint256 public returnedEth;
 
@@ -113,8 +112,6 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(_lendingDays > 0);
         lendingDays = _lendingDays;
 
-        reputation = EthicHubReputationInterface(ethicHubStorage.getAddress(keccak256("contract.name", "reputation")));
-        require(reputation != address(0));
 
         state = LendingState.Uninitialized;
     }
@@ -172,6 +169,8 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         uint maxDelayDays = getMaxDelayDays();
         require(getDelayDays(now) >= maxDelayDays);
         ethicHubStorage.setUint(keccak256("lending.delayDays", this), maxDelayDays);
+        EthicHubReputationInterface reputation = EthicHubReputationInterface(ethicHubStorage.getAddress(keccak256("contract.name", "reputation")));
+        require(reputation != address(0));
         reputation.burnReputation(maxDelayDays);
         state = LendingState.Default;
         emit StateChange(uint(state));
@@ -344,6 +343,8 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
     function updateReputation() internal {
         uint delayDays = getDelayDays(now);
+        EthicHubReputationInterface reputation = EthicHubReputationInterface(ethicHubStorage.getAddress(keccak256("contract.name", "reputation")));
+        require(reputation != address(0));
         if (delayDays > 0) {
             ethicHubStorage.setUint(keccak256("lending.delayDays", this), delayDays);
             reputation.burnReputation(delayDays);
