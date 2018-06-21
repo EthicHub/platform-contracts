@@ -91,28 +91,23 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         EthicHubBase(_storageAddress)
         public {
 
-        version = 1;
-        fundingStartTime = _fundingStartTime;
         require(_fundingEndTime > fundingStartTime);
-        fundingEndTime = _fundingEndTime;
         require(ethicHubStorage.getBool(keccak256("user", "representative", _borrower)));
         require(_localNode != address(0));
         require(_ethicHubTeam != address(0));
         require(ethicHubStorage.getBool(keccak256("user", "localNode", _localNode)));
+        require(_totalLendingAmount > 0);
+        require(_lendingDays > 0);
 
+        version = 1;
+        fundingStartTime = _fundingStartTime;
+        fundingEndTime = _fundingEndTime;
         localNode = _localNode;
         ethicHubTeam = _ethicHubTeam;
-
         borrower = _borrower;
         annualInterest = _annualInterest;
-
-        require(_totalLendingAmount > 0);
         totalLendingAmount = _totalLendingAmount;
-        //90 days for version 0.1
-        require(_lendingDays > 0);
         lendingDays = _lendingDays;
-
-
         state = LendingState.Uninitialized;
     }
 
@@ -168,9 +163,9 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.AwaitingReturn);
         uint maxDelayDays = getMaxDelayDays();
         require(getDelayDays(now) >= maxDelayDays);
-        ethicHubStorage.setUint(keccak256("lending.delayDays", this), maxDelayDays);
         EthicHubReputationInterface reputation = EthicHubReputationInterface(ethicHubStorage.getAddress(keccak256("contract.name", "reputation")));
         require(reputation != address(0));
+        ethicHubStorage.setUint(keccak256("lending.delayDays", this), maxDelayDays);
         reputation.burnReputation(maxDelayDays);
         state = LendingState.Default;
         emit StateChange(uint(state));
@@ -202,10 +197,10 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
      */
     function reclaimContributionDefault(address beneficiary) external {
         require(state == LendingState.Default);
+        require(!investors[beneficiary].isCompensated);
         // contribution = contribution * partial_funds / total_funds
         uint256 contribution = checkInvestorReturns(beneficiary);
         require(contribution > 0);
-        require(!investors[beneficiary].isCompensated);
         investors[beneficiary].isCompensated = true;
         beneficiary.transfer(contribution);
     }
@@ -217,9 +212,9 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
      */
     function reclaimContribution(address beneficiary) external {
         require(state == LendingState.ProjectNotFunded);
+        require(!investors[beneficiary].isCompensated);
         uint256 contribution = investors[beneficiary].amount;
         require(contribution > 0);
-        require(!investors[beneficiary].isCompensated);
         investors[beneficiary].isCompensated = true;
         beneficiary.transfer(contribution);
     }
@@ -238,9 +233,9 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
 
     function reclaimContributionWithInterest(address beneficiary) external {
         require(state == LendingState.ContributionReturned);
+        require(!investors[beneficiary].isCompensated);
         uint256 contribution = checkInvestorReturns(beneficiary);
         require(contribution > 0);
-        require(!investors[beneficiary].isCompensated);
         investors[beneficiary].isCompensated = true;
         beneficiary.transfer(contribution);
     }
