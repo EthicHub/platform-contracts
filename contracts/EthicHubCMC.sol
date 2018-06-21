@@ -34,7 +34,7 @@ contract EthicHubCMC is EthicHubBase, Ownable {
 
     function upgradeContract(address _newContractAddress, string _contractName) public onlyOwner {
         require(_newContractAddress != address(0));
-        require(keccak256("contract.name","") != keccak256("contract.name",_contractName);
+        require(keccak256("contract.name","") != keccak256("contract.name",_contractName));
         address oldAddress = ethicHubStorage.getAddress(keccak256("contract.name", _contractName));
         ethicHubStorage.setAddress(keccak256("contract.address", _newContractAddress), _newContractAddress);
         ethicHubStorage.setAddress(keccak256("contract.name", _contractName), _newContractAddress);

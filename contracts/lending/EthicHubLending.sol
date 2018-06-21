@@ -77,7 +77,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         _;
     }
 
-    function EthicHubLending(
+    constructor(
         uint _fundingStartTime,
         uint _fundingEndTime,
         address _borrower,

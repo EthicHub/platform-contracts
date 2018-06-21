@@ -10,7 +10,7 @@ contract EthicHubBase {
     EthicHubStorageInterface public ethicHubStorage = EthicHubStorageInterface(0);
 
     constructor(address _storageAddress) public {
-        require(_storageAddress != address(0))
+        require(_storageAddress != address(0));
         ethicHubStorage = EthicHubStorageInterface(_storageAddress);
     }
 
