@@ -78,11 +78,11 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     }
 
     constructor(
-        uint _fundingStartTime,
-        uint _fundingEndTime,
+        uint256 _fundingStartTime,
+        uint256 _fundingEndTime,
         address _borrower,
-        uint _annualInterest,
-        uint _totalLendingAmount,
+        uint256 _annualInterest,
+        uint256 _totalLendingAmount,
         uint256 _lendingDays,
         address _storageAddress,
         address _localNode,
@@ -116,7 +116,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         state = LendingState.Uninitialized;
     }
 
-    function saveInitialParametersToStorage(uint _maxDelayDays, uint _tier, uint _communityMembers, address _community) external onlyOwnerOrLocalNode {
+    function saveInitialParametersToStorage(uint256 _maxDelayDays, uint256 _tier, uint256 _communityMembers, address _community) external onlyOwnerOrLocalNode {
         require(_maxDelayDays != 0);
         require(state == LendingState.Uninitialized);
         require(_tier > 0);
@@ -409,7 +409,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         }
     }
 
-    function getMaxDelayDays() public view returns(uint){
+    function getMaxDelayDays() public view returns(uint256){
         return ethicHubStorage.getUint(keccak256("lending.maxDelayDays", this));
     }
 }
