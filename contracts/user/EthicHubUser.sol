@@ -20,7 +20,7 @@
 */
 pragma solidity ^0.4.23;
 
-import '../ownership/Ownable.sol';
+import 'openzeppelin-solidity/contracts/ownership/Ownable.sol';
 import '../EthicHubBase.sol';
 import '../reputation/EthicHubReputationInterface.sol';
 

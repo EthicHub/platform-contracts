@@ -41,6 +41,7 @@
   "homepage": "https://github.com/EthicHub/presale#readme",
   "dependencies": {
     "dotenv": "^5.0.1",
+    "openzeppelin-solidity": "1.10.0",
     "temp": "^0.8.3",
     "truffle-artifactor": "^3.0.2",
     "web3": "^1.0.0-beta.27"

@@ -6,7 +6,6 @@ pragma solidity ^0.4.23;
  * @title EthicHubStorage
  * @dev This contract holds all the necessary state variables to carry out the storage of any contract.
  */
-//contract EthicHubStorage is Ownable {
 contract EthicHubStorage {
 
 	mapping(bytes32 => uint256) internal uintStorage;

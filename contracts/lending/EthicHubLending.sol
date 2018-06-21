@@ -1,9 +1,8 @@
 pragma solidity ^0.4.23;
 
-
-import "../math/SafeMath.sol";
-import "../lifecycle/Pausable.sol";
-import "../ownership/Ownable.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import 'openzeppelin-solidity/contracts/lifecycle/Pausable.sol';
+import 'openzeppelin-solidity/contracts/ownership/Ownable.sol';
 import "../reputation/EthicHubReputationInterface.sol";
 import "../EthicHubBase.sol";
 
