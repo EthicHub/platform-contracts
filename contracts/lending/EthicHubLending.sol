@@ -90,15 +90,16 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         )
         EthicHubBase(_storageAddress)
         public {
-
+        require(_fundingStartTime > now);
         require(_fundingEndTime > fundingStartTime);
+        require(_borrower != address(0));
         require(ethicHubStorage.getBool(keccak256("user", "representative", _borrower)));
         require(_localNode != address(0));
         require(_ethicHubTeam != address(0));
         require(ethicHubStorage.getBool(keccak256("user", "localNode", _localNode)));
         require(_totalLendingAmount > 0);
         require(_lendingDays > 0);
-
+        require(_annualInterest > 0 && _annualInterest < 100);
         version = 1;
         fundingStartTime = _fundingStartTime;
         fundingEndTime = _fundingEndTime;
