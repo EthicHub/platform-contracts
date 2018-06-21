@@ -145,7 +145,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         require(state == LendingState.ExchangingToFiat);
         surplusEth = surplusEth.add(msg.value);
         require(surplusEth <= totalLendingAmount);
-        onSurplusSent(msg.value);
+        emit onSurplusSent(msg.value);
     }
 
     /**
@@ -228,7 +228,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         uint256 surplusContribution = investors[beneficiary].amount.mul(surplusEth).div(surplusEth.add(totalLendingAmount));
         require(surplusContribution > 0);
         investors[beneficiary].surplusEthReclaimed = true;
-        onSurplusReclaimed(beneficiary, surplusContribution);
+        emit onSurplusReclaimed(beneficiary, surplusContribution);
         beneficiary.transfer(surplusContribution);
     }
 
