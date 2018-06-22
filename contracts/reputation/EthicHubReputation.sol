@@ -7,14 +7,14 @@ import './EthicHubReputationInterface.sol';
 contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
 
     //10 with 2 decilmals
-    uint maxReputation = 1000;
-    uint reputationStep = 100;
+    uint constant maxReputation = 1000;
+    uint constant reputationStep = 100;
     //Tier 1 x 20 people
-    uint minProyect = 20;
+    uint constant minProyect = 20;
     uint constant public initReputation = 500;
 
     //0.05
-    uint incrLocalNodeMultiplier = 5;
+    uint constant incrLocalNodeMultiplier = 5;
 
     using SafeMath for uint;
 
