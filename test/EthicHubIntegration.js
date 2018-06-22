@@ -1140,15 +1140,7 @@ contract('Ethichub test olds contracts', function() {
     });
 
     describe('deprecated projects', function() {
-        it('deprecated userManager can not interact with storage', async function() {
-            let newUserManagerInstance = await userManager.new(storageInstance.address)
-            await cmcInstance.upgradeContract(newUserManagerInstance.address, "users");
 
-            await userManagerInstance.registerLocalNode(localNode2).should.be.rejectedWith(EVMRevert);
-            await userManagerInstance.registerRepresentative(investor2).should.be.rejectedWith(EVMRevert);
-            await newUserManagerInstance.registerLocalNode(localNode2).should.be.fulfilled;
-            await newUserManagerInstance.registerRepresentative(investor2).should.be.fulfilled;
-        });
         it('lending should work after reputation contract is updated', async function() {
             await increaseTimeTo(latestTime() + duration.days(1));
             // Some initial parameters
@@ -1240,7 +1232,15 @@ contract('Ethichub test olds contracts', function() {
             await checkReputation(localNode1, community, initialLocalNodeReputation, initialCommunityReputation, lendingInstance, storageInstance, reputationInstance);
 
         });
+        it('deprecated userManager can not interact with storage', async function() {
+            let newUserManagerInstance = await userManager.new(storageInstance.address)
+            await cmcInstance.upgradeContract(newUserManagerInstance.address, "users");
 
+            await userManagerInstance.registerLocalNode(localNode2).should.be.rejectedWith(EVMRevert);
+            await userManagerInstance.registerRepresentative(investor2).should.be.rejectedWith(EVMRevert);
+            await newUserManagerInstance.registerLocalNode(localNode2).should.be.fulfilled;
+            await newUserManagerInstance.registerRepresentative(investor2).should.be.fulfilled;
+        });
     });
 });
 
