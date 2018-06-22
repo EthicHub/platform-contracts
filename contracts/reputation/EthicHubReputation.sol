@@ -99,7 +99,7 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
 
     function incrementCommunityReputation(uint previousReputation, uint completedProjectsByTier) internal public view returns(uint) {
         require(completedProjectsByTier > 0);
-        uint nextRep = previousReputation.add(reputationStep / completedProjectsByTier);
+        uint nextRep = previousReputation.add(reputationStep.div(completedProjectsByTier));
         if (nextRep >= maxReputation) {
             return maxReputation;
         } else {
