@@ -97,7 +97,7 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
         emit ReputationUpdated(localNode, newLocalNodeReputation);
     }
 
-    function incrementCommunityReputation(uint previousReputation, uint completedProjectsByTier) internal public view returns(uint) {
+    function incrementCommunityReputation(uint previousReputation, uint completedProjectsByTier) internal view returns(uint) {
         require(completedProjectsByTier > 0);
         uint nextRep = previousReputation.add(reputationStep.div(completedProjectsByTier));
         if (nextRep >= maxReputation) {
@@ -107,7 +107,7 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
         }
     }
 
-    function incrementLocalNodeReputation(uint previousReputation, uint tier, uint borrowers) internal public view returns(uint) {
+    function incrementLocalNodeReputation(uint previousReputation, uint tier, uint borrowers) internal view returns(uint) {
         uint increment = (tier.mul(borrowers).div(minProyect)).mul(incrLocalNodeMultiplier);
         uint nextRep = previousReputation.add(increment);
         if (nextRep >= maxReputation) {
@@ -117,7 +117,7 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
         }
     }
 
-    function burnLocalNodeReputation(uint delayDays, uint maxDelayDays, uint prevReputation) internal public view returns(uint) {
+    function burnLocalNodeReputation(uint delayDays, uint maxDelayDays, uint prevReputation) internal view returns(uint) {
         if (delayDays >= maxDelayDays){
             return 0;
         }
@@ -129,7 +129,7 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
         }
     }
 
-    function burnCommunityReputation(uint delayDays, uint maxDelayDays, uint prevReputation) internal public pure returns(uint) {
+    function burnCommunityReputation(uint delayDays, uint maxDelayDays, uint prevReputation) internal pure returns(uint) {
         if (delayDays < maxDelayDays) {
             return prevReputation.sub(prevReputation.mul(delayDays).div(maxDelayDays));
         } else {
