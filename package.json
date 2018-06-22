@@ -1,7 +1,7 @@
 {
-  "name": "ethichub_presale",
-  "version": "1.0.0",
-  "description": "The presale contracts for Ethic Hub",
+  "name": "ethichub_platform",
+  "version": "0.1.0",
+  "description": "Smart contracts of the EthicHub platform",
   "scripts": {
     "test": "scripts/test.sh",
     "console": "truffle console",
@@ -18,27 +18,25 @@
     "solidity-coverage": "^0.4.0",
     "truffle": "^4.1.7",
     "truffle-hdwallet-provider": "0.0.3",
-    "zeppelin-solidity": "git+https://github.com/EthicHub/zeppelin-solidity.git#develop"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/EthicHub/presale.git"
+    "url": "git+https://github.com/EthicHub/platform-contracts.git"
   },
   "keywords": [
-    "crowdsale",
-    "tokensale",
-    "ico",
+    "ethichub",
+    "crowdlending",
+    "smart contracts",
     "ethereum",
     "solidity",
-    "zeppelin",
-    "ethichub"
+    "openzeppelin"
   ],
-  "author": "Raúl Martínez",
+  "author": "EthicHub Dev Team: Raúl Martínez, Quijion Jiang, Diego Pardilla",
   "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/EthicHub/presale/issues"
+    "url": "https://github.com/EthicHub/platform-contracts/issues"
   },
-  "homepage": "https://github.com/EthicHub/presale#readme",
+  "homepage": "https://github.com/EthicHub/platform-contracts#readme",
   "dependencies": {
     "dotenv": "^5.0.1",
     "openzeppelin-solidity": "1.10.0",
