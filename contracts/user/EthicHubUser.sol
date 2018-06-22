@@ -50,6 +50,8 @@ contract EthicHubUser is Ownable, EthicHubBase {
         public
         onlyOwner
     {
+        require(target != address(0));
+        require(bytes(profile).length != 0);
         ethicHubStorage.setBool(keccak256("user", profile, target), isRegistered);
         emit UserStatusChanged(target, profile, isRegistered);
     }
@@ -64,6 +66,8 @@ contract EthicHubUser is Ownable, EthicHubBase {
         external
         onlyOwner
     {
+        require(targets.length != 0);
+        require(bytes(profile).length != 0);
         for (uint i = 0; i < targets.length; i++) {
             changeUserStatus(targets[i], profile, isRegistered);
         }
@@ -77,6 +81,8 @@ contract EthicHubUser is Ownable, EthicHubBase {
         view public
         returns(bool isRegistered)
     {
+        require(target != address(0));
+        require(bytes(profile).length != 0);
         isRegistered = ethicHubStorage.getBool(keccak256("user", profile, target));
     }
 
@@ -87,6 +93,7 @@ contract EthicHubUser is Ownable, EthicHubBase {
         external
         onlyOwner
     {
+        require(target != address(0));
         bool isRegistered = ethicHubStorage.getBool(keccak256("user", "localNode", target));
         if (!isRegistered) {
             ethicHubStorage.setBool(keccak256("user", "localNode", target), true);
@@ -102,6 +109,7 @@ contract EthicHubUser is Ownable, EthicHubBase {
         external
         onlyOwner
     {
+        require(target != address(0));
         bool isRegistered = ethicHubStorage.getBool(keccak256("user", "community", target));
         if (!isRegistered) {
             ethicHubStorage.setBool(keccak256("user", "community", target), true);
@@ -117,6 +125,7 @@ contract EthicHubUser is Ownable, EthicHubBase {
         external
         onlyOwner
     {
+        require(target != address(0));
         ethicHubStorage.setBool(keccak256("user", "investor", target), true);
     }
 
@@ -127,6 +136,7 @@ contract EthicHubUser is Ownable, EthicHubBase {
         external
         onlyOwner
     {
+        require(target != address(0));
         ethicHubStorage.setBool(keccak256("user", "representative", target), true);
     }
 
