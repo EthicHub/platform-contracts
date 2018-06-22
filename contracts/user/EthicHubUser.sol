@@ -66,7 +66,7 @@ contract EthicHubUser is Ownable, EthicHubBase {
         external
         onlyOwner
     {
-        require(targets.length != 0);
+        require(targets.length > 0);
         require(bytes(profile).length != 0);
         for (uint i = 0; i < targets.length; i++) {
             changeUserStatus(targets[i], profile, isRegistered);
