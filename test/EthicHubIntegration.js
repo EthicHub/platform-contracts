@@ -284,7 +284,7 @@ contract('EthicHubLending (Lending owner != LocalNode)', function() {
             //console.log('Community return amount (ETH):' + utils.fromWei(utils.toBN(borrowerReturnAmount)));
             //const borrowerReturnFiatAmount = await lendingInstance.borrowerReturnFiatAmount();
             //console.log('Community return amount (pesos):' + utils.fromWei(utils.toBN(borrowerReturnFiatAmount)));
-            transaction = await lendingInstance.returnBorrowedEth({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
+            transaction = await lendingInstance.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
             reportMethodGasUsed('report', 'borrower', 'lendingInstance.returnBorrowedEth', transaction.tx);
             // Reclaims amounts
             transaction = await lendingInstance.reclaimContributionWithInterest(investor1, {from: investor1}).should.be.fulfilled;
@@ -426,7 +426,7 @@ contract('EthicHubLending (Lending owner == LocalNode)', function() {
             //console.log('Community return amount (ETH):' + utils.fromWei(utils.toBN(borrowerReturnAmount)));
             //const borrowerReturnFiatAmount = await lendingInstance.borrowerReturnFiatAmount();
             //console.log('Community return amount (pesos):' + utils.fromWei(utils.toBN(borrowerReturnFiatAmount)));
-            transaction = await lendingInstance.returnBorrowedEth({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
+            transaction = await lendingInstance.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
             reportMethodGasUsed('report', 'borrower', 'lendingInstance.returnBorrowedEth', transaction.tx);
             // Reclaims amounts
             transaction = await lendingInstance.reclaimContributionWithInterest(investor1, {from: investor1}).should.be.fulfilled;
@@ -1069,7 +1069,7 @@ contract('EthicHubLending with surplus', function() {
             checkLostinTransactions(expectedInvestor2Balance,investor2FinalBalance);
 
             const borrowerReturnAmount = await lendingInstance.borrowerReturnAmount();
-            transaction = await lendingInstance.returnBorrowedEth({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
+            transaction = await lendingInstance.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
             reportMethodGasUsed('report', 'borrower', 'lendingInstance.returnBorrowedEth', transaction.tx);
 
             var investorInitialBalance = await web3.eth.getBalance(investor1);
@@ -1212,7 +1212,7 @@ contract('Ethichub test olds contracts', function() {
             //console.log('Community return amount (ETH):' + utils.fromWei(utils.toBN(borrowerReturnAmount)));
             //const borrowerReturnFiatAmount = await lendingInstance.borrowerReturnFiatAmount();
             //console.log('Community return amount (pesos):' + utils.fromWei(utils.toBN(borrowerReturnFiatAmount)));
-            transaction = await lendingInstance.returnBorrowedEth({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
+            transaction = await lendingInstance.sendTransaction({value: borrowerReturnAmount, from: borrower}).should.be.fulfilled;
             reportMethodGasUsed('report', 'borrower', 'lendingInstance.returnBorrowedEth', transaction.tx);
             // Reclaims amounts
             transaction = await lendingInstance.reclaimContributionWithInterest(investor1, {from: investor1}).should.be.fulfilled;
