@@ -140,7 +140,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         }
     }
 
-    function sendBackSurplusEth() public payable {
+    function sendBackSurplusEth() internal {
         require(state == LendingState.ExchangingToFiat);
         surplusEth = surplusEth.add(msg.value);
         require(surplusEth <= totalLendingAmount);
@@ -258,7 +258,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
         ethicHubTeam.transfer(fee);
     }
 
-    function returnBorrowedEth() payable public {
+    function returnBorrowedEth() internal {
         require(state == LendingState.AwaitingReturn);
         require(borrowerReturnEthPerFiatRate > 0);
         bool projectRepayed = false;
@@ -285,7 +285,7 @@ contract EthicHubLending is EthicHubBase, Ownable, Pausable {
     //  If cap is reached, end time should be modified
     //  Funds should be transferred into multisig wallet
     // @param contributor Address
-    function contributeWithAddress(address contributor) public payable checkProfileRegistered('investor') whenNotPaused {
+    function contributeWithAddress(address contributor) internal checkProfileRegistered('investor') whenNotPaused {
         require(state == LendingState.AcceptingContributions);
         require(msg.value >= minContribAmount);
         require(isContribPeriodRunning());
