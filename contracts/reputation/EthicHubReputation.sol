@@ -108,6 +108,10 @@ contract EthicHubReputation is EthicHubBase, EthicHubReputationInterface {
     }
 
     function incrementLocalNodeReputation(uint previousReputation, uint tier, uint borrowers) public view returns(uint) {
+        require(tier >= 1);
+        //this should 20 but since it's hardcoded in EthicHubLending, let's be safe.
+        //TODO store min borrowers in EthicHubStorage
+        require(borrowers > 0); 
         uint increment = (tier.mul(borrowers).div(minProyect)).mul(incrLocalNodeMultiplier);
         uint nextRep = previousReputation.add(increment);
         if (nextRep >= maxReputation) {
