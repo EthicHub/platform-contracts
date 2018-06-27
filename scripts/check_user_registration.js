@@ -26,7 +26,7 @@ console.log("address: "+address)
 
 loader.load(web3, 'EthicHubUser',userAddress).then( async (userInstance) =>  {
 
-    var action = userInstance.methods.viewRegistrationStatus(target, role)
+    var action = userInstance.methods.viewRegistrationStatus(address, role)
 
 
     var response = await action.call({from:account});
